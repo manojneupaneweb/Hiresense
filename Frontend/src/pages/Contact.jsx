@@ -357,7 +357,6 @@ const Contact = () => {
             </div>
 
             {/* Map Section */}
-            {/* Map Section */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="h-64 w-full bg-gray-200 flex items-center justify-center">
                 <div className="text-center">
