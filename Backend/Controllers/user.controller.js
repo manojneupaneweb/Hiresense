@@ -16,6 +16,7 @@ const generateAccessToken = (user) => {
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
 };
+
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user.id },
@@ -23,7 +24,21 @@ const generateRefreshToken = (user) => {
     { expiresIn: process.env.REFRESH_TOKEN_EXPIRY }
   );
 };
+const generateAccessRefreshToken = async (userId) => {
 
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const accessToken = await user.generateAccessToken();
+  const refreshToken = await user.generateRefreshToken();
+
+  user.refreshToken = refreshToken;
+  await user.save();
+  return { accessToken, refreshToken };
+
+};
 
 const registerUser = async (req, res) => {
   try {
@@ -78,8 +93,8 @@ const loginUser = async (req, res) => {
 
     // if (!isPasswordValid) return res.status(401).json({ message: "Invalid credentials" });
 
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const { accessToken, refreshToken } = await generateAccessRefreshToken(user._id);
+
     if (!accessToken || !refreshToken)
       return res.status(500).json({ message: "Failed to generate tokens" });
 
@@ -106,16 +121,19 @@ const loginUser = async (req, res) => {
 const getUserProfile = async (req, res) => {
   const userId = req.user.id;
 
-  const user = await User.findByPk(userId, {
-    attributes: { exclude: ["password"] }
-  });
+  const user = await User.findById(userId).select("-password -refreshToken");
 
   if (!user) {
-    throw new ApiError(404, "User not found");
+    return res.status(404).json({ message: "User not found" });
   }
 
-  res.status(200).json(new ApiResponse(200, "User profile retrieved", user));
+  res.status(200).json({
+    status: 200,
+    message: "User profile retrieved",
+    user
+  });
 };
+
 
 const logOutUser = async (req, res, next) => {
   // try {

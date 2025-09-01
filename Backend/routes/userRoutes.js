@@ -10,6 +10,6 @@ router.route('/login').post(loginUser);
 
 
 
-router.route('/getuser').post(verifyJwt, getUserProfile);
+router.route('/getuser').get(verifyJwt, getUserProfile);
 
 export default router;

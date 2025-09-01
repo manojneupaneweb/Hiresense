@@ -1,45 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import Logo from '../../public/Hiresense.png';
-import Login from './Login';
-import Signup from './Signup';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 
-function Header() {
+const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [activeForm, setActiveForm] = useState(null);
-  const [user, setUser] = useState(null); // State to store user data
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'Job', href: '/job' },
-    { name: 'How It Works', href: 'work' },
+    { name: 'How It Works', href: '/work' },
     { name: 'Pricing', href: '/pricing' },
     { name: 'Contact', href: '/contact' },
   ];
 
-  // Check for existing user data on component mount
+  // Check if user is already logged in on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  // Function to check if user is logged in by verifying tokens
-  const checkAuthStatus = () => {
-    // Check if we have access token in cookies
-    const accessToken = getCookie('accessToken');
-    
-    if (accessToken) {
-      // If we have a token, try to get user data from localStorage
-      const userData = localStorage.getItem('userData');
-      if (userData) {
-        setUser(JSON.parse(userData));
-      } else {
-        // If no user data in storage but we have token, fetch user data
-        fetchUserData(accessToken);
+  const checkAuthStatus = async () => {
+    const token = getCookie('accessToken');
+    if (token) {
+      try {
+        const response = await axios.get('/api/user/getuser', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        handleLogout();
       }
     }
   };
 
-  // Function to get cookie value by name
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
@@ -47,76 +47,96 @@ function Header() {
     return null;
   };
 
-  // Function to fetch user data using access token
-  const fetchUserData = async (token) => {
+  const handleLogin = async (credentials) => {
+    setLoading(true);
     try {
-      const response = await fetch('/api/user/profile', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await axios.post('/api/auth/login', credentials);
+      const { user: userData, token } = response.data;
       
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem('userData', JSON.stringify(userData));
-      } else {
-        // If token is invalid, clear stored data
-        handleLogout();
-      }
+      // Set token in cookie
+      document.cookie = `accessToken=${token}; path=/; max-age=86400`; // 1 day
+      
+      setUser(userData);
+      setActiveForm(null);
+      toast.success(`Welcome back, ${userData.fullName}!`);
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Login error:', error);
+      toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Function to handle login success
-  const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    localStorage.setItem('userData', JSON.stringify(userData));
-    setActiveForm(null); // Close the login form
+  const handleSignup = async (userData) => {
+    setLoading(true);
+    try {
+      const response = await axios.post('/api/auth/signup', userData);
+      const { user: newUser, token } = response.data;
+      
+      // Set token in cookie
+      document.cookie = `accessToken=${token}; path=/; max-age=86400`; // 1 day
+      
+      setUser(newUser);
+      setActiveForm(null);
+      toast.success(`Account created successfully! Welcome, ${newUser.fullName}!`);
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast.error(error.response?.data?.message || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Function to handle logout
   const handleLogout = () => {
     // Clear cookies
     document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    // Clear local storage
-    localStorage.removeItem('userData');
     
     // Reset user state
     setUser(null);
     
     // Close user menu
     setIsUserMenuOpen(false);
+    
+    toast.info('You have been logged out');
   };
 
-  // Close forms when clicking outside
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       setActiveForm(null);
     }
   };
 
+  const isOrganization = user && user.role === 'organization';
+
   return (
     <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      
       <header className="bg-white shadow-md relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo and navigation */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center">
-                  <img src={Logo} alt="Hiresense Logo" className="h-8 w-auto" />
-                </div>
-                <span className="ml-2 text-xl font-bold bg-gradient-to-r from-[#0097b2] to-[#2bbcef] bg-clip-text text-transparent">
-                  Hiresence
-                </span>
+            {/* Logo */}
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-[#0097b2] to-[#2bbcef]">
+                <span className="text-white font-bold text-lg">H</span>
               </div>
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-[#0097b2] to-[#2bbcef] bg-clip-text text-transparent">
+                Hiresense
+              </span>
             </div>
+            
+            {/* Desktop Navigation */}
             <div className="hidden md:block ml-10">
               <nav className="flex space-x-4">
                 {navLinks.map((link) => (
@@ -132,10 +152,9 @@ function Header() {
               </nav>
             </div>
             
-            {/* User section - Conditionally render based on login status */}
+            {/* User section */}
             <div className="hidden md:block relative">
               {user ? (
-                // Display user profile when logged in
                 <div className="flex items-center">
                   <span className="mr-4 text-gray-700">Hi, {user.fullName}</span>
                   <button
@@ -146,52 +165,66 @@ function Header() {
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.fullName} className="h-10 w-10 rounded-full" />
                       ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
+                        <i className="fas fa-user text-white"></i>
                       )}
                     </div>
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="origin-top-right absolute right-0 mt-3 w-48 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 transition-all duration-200 transform opacity-100 scale-100">
-                      <a
-                        href="/profile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
-                      >
-                        Your Profile
-                      </a>
-                      <a
-                        href="/settings"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
-                      >
-                        Settings
-                      </a>
-                      <button
-                        onClick={handleLogout}
-                        className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
-                      >
-                        Sign out
-                      </button>
+                    <div className="origin-top-right absolute right-0 mt-3 w-48 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                      {isOrganization ? (
+                        <>
+                          <a
+                            href="/dashboard"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                          >
+                            <i className="fas fa-tachometer-alt mr-2"></i>Dashboard
+                          </a>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                          >
+                            <i className="fas fa-sign-out-alt mr-2"></i>Sign out
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <a
+                            href="/profile"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                          >
+                            <i className="fas fa-user-circle mr-2"></i>Your Profile
+                          </a>
+                          <a
+                            href="/settings"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                          >
+                            <i className="fas fa-cog mr-2"></i>Settings
+                          </a>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                          >
+                            <i className="fas fa-sign-out-alt mr-2"></i>Sign out
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
               ) : (
-                // Display login/signup buttons when not logged in
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
                 >
                   <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
+                    <i className="fas fa-user text-white"></i>
                   </div>
                 </button>
               )}
 
               {!user && isUserMenuOpen && (
-                <div className="origin-top-right absolute right-0 mt-3 w-36 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 transition-all duration-200 transform opacity-100 scale-100">
+                <div className="origin-top-right absolute right-0 mt-3 w-36 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                   <button
                     onClick={() => {
                       setActiveForm('login');
@@ -199,10 +232,7 @@ function Header() {
                     }}
                     className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200 flex items-center"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Login
+                    <i className="fas fa-sign-in-alt mr-2"></i>Login
                   </button>
                   <button
                     onClick={() => {
@@ -211,10 +241,7 @@ function Header() {
                     }}
                     className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200 flex items-center"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                    Sign Up
+                    <i className="fas fa-user-plus mr-2"></i>Sign Up
                   </button>
                 </div>
               )}
@@ -226,29 +253,13 @@ function Header() {
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-[#0097b2] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#2bbcef]"
               >
-                <span className="sr-only">Open main menu</span>
-                {/* Hamburger icon */}
-                <svg
-                  className="block h-6 w-6"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
+                <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-lg`}></i>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Mobile menu, show/hide based on menu state */}
+        {/* Mobile menu */}
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
@@ -256,10 +267,9 @@ function Header() {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-gray-600 hover:text-[#0097b2] block px-3 py-2 rounded-md text-base font-medium relative group"
+                  className="text-gray-600 hover:text-[#0097b2] block px-3 py-2 rounded-md text-base font-medium"
                 >
                   {link.name}
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#0097b2] transition-all duration-200 group-hover:w-full"></span>
                 </a>
               ))}
               <div className="pt-4 pb-3 border-t border-gray-200">
@@ -268,18 +278,43 @@ function Header() {
                     <div className="px-3 py-2 text-base font-medium text-gray-800">
                       Hi, {user.fullName}
                     </div>
-                    <a
-                      href="/profile"
-                      className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
-                    >
-                      Your Profile
-                    </a>
-                    <button
-                      onClick={handleLogout}
-                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
-                    >
-                      Sign Out
-                    </button>
+                    {isOrganization ? (
+                      <>
+                        <a
+                          href="/dashboard"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                        >
+                          <i className="fas fa-tachometer-alt mr-2"></i>Dashboard
+                        </a>
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                        >
+                          <i className="fas fa-sign-out-alt mr-2"></i>Sign Out
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <a
+                          href="/profile"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                        >
+                          <i className="fas fa-user-circle mr-2"></i>Your Profile
+                        </a>
+                        <a
+                          href="/settings"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                        >
+                          <i className="fas fa-cog mr-2"></i>Settings
+                        </a>
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                        >
+                          <i className="fas fa-sign-out-alt mr-2"></i>Sign Out
+                        </button>
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
@@ -290,7 +325,7 @@ function Header() {
                       }}
                       className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
                     >
-                      Login
+                      <i className="fas fa-sign-in-alt mr-2"></i>Login
                     </button>
                     <button
                       onClick={() => {
@@ -299,7 +334,7 @@ function Header() {
                       }}
                       className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
                     >
-                      Sign Up
+                      <i className="fas fa-user-plus mr-2"></i>Sign Up
                     </button>
                   </>
                 )}
@@ -309,13 +344,13 @@ function Header() {
         )}
       </header>
 
-      {/* Form Overlay with Glassmorphism Effect */}
+      {/* Auth Form Overlay */}
       {activeForm && (
         <div 
           className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white/90 rounded-xl shadow-2xl max-w-md w-full overflow-hidden transform transition-all duration-300 scale-95 animate-in fade-in-90 border border-white/20">
+          <div className="bg-white/90 rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-white/20">
             <div className="px-6 py-4 border-b border-gray-200/50 flex justify-between items-center">
               <h3 className="text-xl font-semibold text-gray-800">
                 {activeForm === 'login' ? 'Login to Your Account' : 'Create an Account'}
@@ -324,17 +359,15 @@ function Header() {
                 onClick={() => setActiveForm(null)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <i className="fas fa-times text-lg"></i>
               </button>
             </div>
             
             <div className="px-6 py-5">
               {activeForm === 'login' ? (
-                <Login onLoginSuccess={handleLoginSuccess} />
+                <LoginForm onSubmit={handleLogin} loading={loading} />
               ) : (
-                <Signup onSignupSuccess={handleLoginSuccess} />
+                <SignupForm onSubmit={handleSignup} loading={loading} />
               )}
             </div>
             
@@ -354,6 +387,176 @@ function Header() {
       )}
     </>
   );
-}
+};
+
+// Login Form Component
+const LoginForm = ({ onSubmit, loading }) => {
+  const [credentials, setCredentials] = useState({
+    email: '',
+    password: ''
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(credentials);
+  };
+
+  const handleChange = (e) => {
+    setCredentials({
+      ...credentials,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          Email Address
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={credentials.email}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={credentials.password}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-[#0097b2] disabled:opacity-50"
+      >
+        {loading ? 'Signing in...' : 'Sign In'}
+      </button>
+    </form>
+  );
+};
+
+// Signup Form Component
+const SignupForm = ({ onSubmit, loading }) => {
+  const [userData, setUserData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    userType: 'candidate' // candidate or organization
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (userData.password !== userData.confirmPassword) {
+      alert("Passwords don't match");
+      return;
+    }
+    onSubmit(userData);
+  };
+
+  const handleChange = (e) => {
+    setUserData({
+      ...userData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+          Full Name
+        </label>
+        <input
+          type="text"
+          id="fullName"
+          name="fullName"
+          value={userData.fullName}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          Email Address
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={userData.email}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-1">
+          I am a
+        </label>
+        <select
+          id="userType"
+          name="userType"
+          value={userData.userType}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+        >
+          <option value="candidate">Job Seeker</option>
+          <option value="organization">Employer</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={userData.password}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+          Confirm Password
+        </label>
+        <input
+          type="password"
+          id="confirmPassword"
+          name="confirmPassword"
+          value={userData.confirmPassword}
+          onChange={handleChange}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          required
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-[#0097b2] disabled:opacity-50"
+      >
+        {loading ? 'Creating Account...' : 'Create Account'}
+      </button>
+    </form>
+  );
+};
 
 export default Header;
