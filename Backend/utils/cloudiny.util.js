@@ -1,12 +1,15 @@
-import cloudinary from 'cloudinary';
 import fs from 'fs';
+import { v2 as cloudinary } from "cloudinary";
 
-cloudinary.v2.config({
-    cloud_name: process.env.CLOUDENIRAY_cloud_name,
-    api_key: process.env.CLOUDENIRAY_api_key,
-    api_secret: process.env.CLOUDENIRAY_api_secret,
+cloudinary.config({
+    cloud_name: 'dmapisaup',
+    api_key: '157722841297896',
+    api_secret: 'EzViRWuYrlduRDQqXc9I8HDlUVk',
     secure: true,
 });
+
+
+
 
 const uploadOnCloudinary = async (localFilePath) => {
     try {

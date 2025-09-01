@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Logo from '../../public/Hiresense.png';
 import Login from './Login';
 import Signup from './Signup';
@@ -6,7 +6,8 @@ import Signup from './Signup';
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [activeForm, setActiveForm] = useState(null); // 'login' or 'signup'
+  const [activeForm, setActiveForm] = useState(null);
+  const [user, setUser] = useState(null); // State to store user data
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -15,6 +16,83 @@ function Header() {
     { name: 'Pricing', href: '/pricing' },
     { name: 'Contact', href: '/contact' },
   ];
+
+  // Check for existing user data on component mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  // Function to check if user is logged in by verifying tokens
+  const checkAuthStatus = () => {
+    // Check if we have access token in cookies
+    const accessToken = getCookie('accessToken');
+    
+    if (accessToken) {
+      // If we have a token, try to get user data from localStorage
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      } else {
+        // If no user data in storage but we have token, fetch user data
+        fetchUserData(accessToken);
+      }
+    }
+  };
+
+  // Function to get cookie value by name
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  };
+
+  // Function to fetch user data using access token
+  const fetchUserData = async (token) => {
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem('userData', JSON.stringify(userData));
+      } else {
+        // If token is invalid, clear stored data
+        handleLogout();
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
+  // Function to handle login success
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    localStorage.setItem('userData', JSON.stringify(userData));
+    setActiveForm(null); // Close the login form
+  };
+
+  // Function to handle logout
+  const handleLogout = () => {
+    // Clear cookies
+    document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    document.cookie = 'refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    
+    // Clear local storage
+    localStorage.removeItem('userData');
+    
+    // Reset user state
+    setUser(null);
+    
+    // Close user menu
+    setIsUserMenuOpen(false);
+  };
 
   // Close forms when clicking outside
   const handleOverlayClick = (e) => {
@@ -53,20 +131,66 @@ function Header() {
                 ))}
               </nav>
             </div>
-            {/* User section */}
+            
+            {/* User section - Conditionally render based on login status */}
             <div className="hidden md:block relative">
-              <button
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
-              >
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </button>
+              {user ? (
+                // Display user profile when logged in
+                <div className="flex items-center">
+                  <span className="mr-4 text-gray-700">Hi, {user.fullName}</span>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
+                  >
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.fullName} className="h-10 w-10 rounded-full" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                  </button>
 
-              {isUserMenuOpen && (
+                  {isUserMenuOpen && (
+                    <div className="origin-top-right absolute right-0 mt-3 w-48 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 transition-all duration-200 transform opacity-100 scale-100">
+                      <a
+                        href="/profile"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                      >
+                        Your Profile
+                      </a>
+                      <a
+                        href="/settings"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                      >
+                        Settings
+                      </a>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Display login/signup buttons when not logged in
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
+                >
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                </button>
+              )}
+
+              {!user && isUserMenuOpen && (
                 <div className="origin-top-right absolute right-0 mt-3 w-36 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10 transition-all duration-200 transform opacity-100 scale-100">
                   <button
                     onClick={() => {
@@ -139,24 +263,46 @@ function Header() {
                 </a>
               ))}
               <div className="pt-4 pb-3 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setActiveForm('login');
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
-                >
-                  Login
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveForm('signup');
-                    setIsMenuOpen(false);
-                  }}
-                  className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
-                >
-                  Sign Up
-                </button>
+                {user ? (
+                  <>
+                    <div className="px-3 py-2 text-base font-medium text-gray-800">
+                      Hi, {user.fullName}
+                    </div>
+                    <a
+                      href="/profile"
+                      className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                    >
+                      Your Profile
+                    </a>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setActiveForm('login');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                    >
+                      Login
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveForm('signup');
+                        setIsMenuOpen(false);
+                      }}
+                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                    >
+                      Sign Up
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -186,9 +332,9 @@ function Header() {
             
             <div className="px-6 py-5">
               {activeForm === 'login' ? (
-                <Login />
+                <Login onLoginSuccess={handleLoginSuccess} />
               ) : (
-                <Signup />
+                <Signup onSignupSuccess={handleLoginSuccess} />
               )}
             </div>
             

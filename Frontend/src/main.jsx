@@ -8,7 +8,6 @@ import axios from "axios";
 import App from "./App.jsx";
 import Home from './pages/Home.jsx'
 import Jobs from "./pages/jobs.jsx";
-import Pricing from "./pages/Pricing.jsx";
 
 axios.defaults.baseURL = "http://localhost:8000";
 axios.defaults.withCredentials = true;
@@ -21,8 +20,7 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       { path: "/", element: <Home /> },
-      { path: "/job", element: <Jobs /> },
-      { path: "/pricing", element: <Pricing /> },
+      { path: "/jobs", element: <Jobs /> },
     ],
   },
 ]);
