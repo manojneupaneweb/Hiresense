@@ -50,7 +50,7 @@ const Header = () => {
             'Authorization': `Bearer ${token}`
           }
         });
-        console.log('Header user data:', response.data);
+        console.log('user data:', response.data);
         setUser(response.data.user);
         // Save user data to localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -58,9 +58,9 @@ const Header = () => {
         console.error('Error fetching user data:', error);
         // Clear invalid user data
         localStorage.removeItem('user');
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          handleLogout();
-        }
+        // if (error.response?.status === 401 || error.response?.status === 403) {
+        //   handleLogout();
+        // }
       }
     } else {
       console.log('No authentication token found');
@@ -80,6 +80,8 @@ const Header = () => {
     setLoading(true);
     try {
       const response = await axios.post('/api/user/login', credentials);
+      localStorage.setItem('accessToken', response.data.accessToken);
+      
       const { user: userData, token } = response.data;
 
       // Set token in cookie

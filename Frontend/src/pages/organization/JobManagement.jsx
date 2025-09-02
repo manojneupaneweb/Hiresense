@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   Plus,
   Search,
@@ -11,51 +12,21 @@ import {
   XCircle,
   X,
   Trash2,
+  Loader,
+  AlertCircle
 } from "lucide-react";
 
 const JobManagement = () => {
-  const [jobs, setJobs] = useState([
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      jobType: "Full-time",
-      location: "San Francisco, CA",
-      postedDate: "2023-10-15",
-      status: "Active",
-      applicants: 42,
-      description:
-        "We are looking for an experienced frontend developer with React expertise.",
-      requirements: "5+ years experience, React, TypeScript, CSS",
-      responsibilities: [
-        "Develop new user-facing features using React.js",
-        "Build reusable components and front-end libraries",
-        "Translate designs into high-quality code",
-      ],
-      skills: ["React", "TypeScript", "JavaScript", "CSS"],
-    },
-    {
-      id: 2,
-      title: "Product Manager",
-      jobType: "Full-time",
-      location: "New York, NY",
-      postedDate: "2023-10-10",
-      status: "Active",
-      applicants: 28,
-      description:
-        "Lead product initiatives and work with cross-functional teams.",
-      requirements: "3+ years PM experience, Agile methodology",
-      responsibilities: [
-        "Define product vision and roadmap",
-        "Gather and prioritize requirements",
-        "Work with engineering teams",
-      ],
-      skills: ["Product Management", "Agile", "Analytics"],
-    },
-  ]);
-
+  const [jobs, setJobs] = useState([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const token = localStorage.getItem("accessToken")
+
   const [newJob, setNewJob] = useState({
     title: "",
     jobType: "Full-time",
@@ -76,30 +47,76 @@ const JobManagement = () => {
     "Remote",
   ];
 
-  const handleAddJob = () => {
-    const newJobWithDetails = {
-      ...newJob,
-      id: Math.max(...jobs.map((job) => job.id)) + 1,
-      postedDate: new Date().toISOString().split("T")[0],
-      status: "Active",
-      applicants: 0,
-      responsibilities: newJob.responsibilities.filter((r) => r.trim() !== ""),
-      skills: newJob.skills.filter((s) => s.trim() !== ""),
+  // Fetch jobs from API
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/api/job/getmyJobs', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          },
+          withCredentials: true
+        });
+
+        setJobs(response.data.jobs || []);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+        setError("Failed to load jobs. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setJobs([...jobs, newJobWithDetails]);
-    setIsAddModalOpen(false);
-    setNewJob({
-      title: "",
-      jobType: "Full-time",
-      location: "",
-      description: "",
-      requirements: "",
-      responsibilities: [""],
-      skills: [""],
-    });
-    setNewResponsibility("");
-    setNewSkill("");
+    fetchJobs();
+  }, []);
+
+  // Handle job creation
+  const handleAddJob = async () => {
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const jobData = {
+        ...newJob,
+        responsibilities: newJob.responsibilities.filter((r) => r.trim() !== ""),
+        skills: newJob.skills.filter((s) => s.trim() !== ""),
+      };
+
+      const response = await axios.post(
+        'api/job/createJobpost',
+        jobData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        }
+      );
+
+      // Add the new job to the local state
+      setJobs([...jobs, response.data.job]);
+
+      // Close modal and reset form
+      setIsAddModalOpen(false);
+      setNewJob({
+        title: "",
+        jobType: "Full-time",
+        location: "",
+        description: "",
+        requirements: "",
+        responsibilities: [""],
+        skills: [""],
+      });
+      setNewResponsibility("");
+      setNewSkill("");
+    } catch (err) {
+      console.error("Error creating job:", err);
+      setError("Failed to create job. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const addResponsibility = () => {
@@ -140,17 +157,43 @@ const JobManagement = () => {
     });
   };
 
+  // Fixed filtering function with safe property access
   const filteredJobs = jobs.filter((job) => {
+    // Safely handle potentially undefined properties
+    const title = job.title || "";
+    const jobType = job.jobType || "";
+    const location = job.location || "";
+    const status = job.status || "";
+
     const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "All" || job.status === statusFilter;
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      location.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === "All" || status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader size={32} className="animate-spin text-blue-500" />
+        <span className="ml-2 text-gray-600">Loading jobs...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-center p-4 bg-red-50 text-red-700 rounded-xl">
+          <AlertCircle size={20} className="mr-2" />
+          {error}
+        </div>
+      )}
+
       {/* Header and Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -197,149 +240,166 @@ const JobManagement = () => {
         </div>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 text-left text-gray-500 text-sm">
-              <th className="py-4 px-6 font-medium">Job Title</th>
-              <th className="py-4 px-6 font-medium">Job Type</th>
-              <th className="py-4 px-6 font-medium">Location</th>
-              <th className="py-4 px-6 font-medium">Posted Date</th>
-              <th className="py-4 px-6 font-medium">Status</th>
-              <th className="py-4 px-6 font-medium">Applicants</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {filteredJobs.map((job) => (
-              <tr key={job.id} className="hover:bg-gray-50 group">
-                <td className="py-4 px-6">
-                  <Link
-                    to={`/organization/jobs/${job.id}`}
-                    className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors"
-                  >
-                    {job.title}
-                  </Link>
-                  <p className="text-sm text-gray-500 line-clamp-1 mt-1">
-                    {job.description}
-                  </p>
-                </td>
-                <td className="py-4 px-6 text-gray-900">{job.jobType}</td>
-                <td className="py-4 px-6 text-gray-900">
-                  <div className="flex items-center">
-                    <MapPin size={14} className="text-gray-400 mr-1" />
-                    {job.location}
-                  </div>
-                </td>
-                <td className="py-4 px-6 text-gray-900">
-                  <div className="flex items-center">
-                    <Calendar size={14} className="text-gray-400 mr-1" />
-                    {job.postedDate}
-                  </div>
-                </td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center">
-                    {job.status === "Active" ? (
-                      <CheckCircle size={16} className="text-green-500 mr-1" />
-                    ) : (
-                      <XCircle size={16} className="text-gray-500 mr-1" />
-                    )}
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        job.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
+      {/* Jobs List */}
+      {filteredJobs.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl">
+          <p className="text-gray-500">No jobs found. Create your first job posting!</p>
+        </div>
+      ) : (
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-2xl shadow-sm overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-left text-gray-500 text-sm">
+                  <th className="py-4 px-6 font-medium">Job Title</th>
+                  <th className="py-4 px-6 font-medium">Job Type</th>
+                  <th className="py-4 px-6 font-medium">Location</th>
+                  <th className="py-4 px-6 font-medium">Posted Date</th>
+                  <th className="py-4 px-6 font-medium">Status</th>
+                  <th className="py-4 px-6 font-medium">Applicants</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredJobs.map((job) => (
+                  <tr key={job._id || job.id} className="hover:bg-gray-50 group">
+                    <td className="py-4 px-6">
+                      <Link
+                        to={`/organization/jobs/${job._id || job.id}`}
+                        className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors"
+                      >
+                        {job.title || "Untitled Position"}
+                      </Link>
+                      <p className="text-sm text-gray-500 line-clamp-1 mt-1">
+                        {job.description || "No description available"}
+                      </p>
+                    </td>
+                    <td className="py-4 px-6 text-gray-900">{job.jobType || "Not specified"}</td>
+                    <td className="py-4 px-6 text-gray-900">
+                      <div className="flex items-center">
+                        <MapPin size={14} className="text-gray-400 mr-1" />
+                        {job.location || "Remote"}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6 text-gray-900">
+                      <div className="flex items-center">
+                        <Calendar size={14} className="text-gray-400 mr-1" />
+                        {job.postedDate ? new Date(job.postedDate).toLocaleDateString() : "Unknown date"}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center">
+                        {job.status === "Active" ? (
+                          <CheckCircle size={16} className="text-green-500 mr-1" />
+                        ) : (
+                          <XCircle size={16} className="text-gray-500 mr-1" />
+                        )}
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${job.status === "Active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                            }`}
+                        >
+                          {job.status || "Unknown"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center">
+                        <Users size={16} className="text-gray-400 mr-2" />
+                        <span className="text-gray-900">{job.applicants || 0}</span>
+                      </div>
+                    </td>
+                    <a
+                      href={`/organization/jobs/${job._id}/applicants`}
+                      target="_blank"
+                      className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg shadow hover:bg-blue-700 transition"
                     >
-                      {job.status}
-                    </span>
+                      View Applicant
+                    </a>
+
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4">
+            {filteredJobs.map((job) => (
+              <Link
+                key={job._id || job.id}
+                to={`/organization/jobs/${job._id || job.id}`}
+                className="block bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div>
+                  <h3 className="font-bold text-lg text-gray-900">{job.title || "Untitled Position"}</h3>
+                  <div className="flex items-center mt-1 text-sm text-gray-500">
+                    <MapPin size={14} className="mr-1" />
+                    <span>{job.location || "Remote"}</span>
                   </div>
-                </td>
-                <td className="py-4 px-6">
-                  <div className="flex items-center">
-                    <Users size={16} className="text-gray-400 mr-2" />
-                    <span className="text-gray-900">{job.applicants}</span>
+                  <div className="flex items-center mt-1 text-sm text-gray-500">
+                    <Calendar size={14} className="mr-1" />
+                    <span>{job.postedDate ? new Date(job.postedDate).toLocaleDateString() : "Unknown date"}</span>
                   </div>
-                </td>
-              </tr>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Job Type</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {job.jobType || "Not specified"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Status</p>
+                    <div className="flex items-center">
+                      {job.status === "Active" ? (
+                        <CheckCircle size={14} className="text-green-500 mr-1" />
+                      ) : (
+                        <XCircle size={14} className="text-gray-500 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs font-medium ${job.status === "Active"
+                          ? "text-green-800"
+                          : "text-gray-800"
+                          }`}
+                      >
+                        {job.status || "Unknown"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Applicants</p>
+                    <div className="flex items-center">
+                      <Users size={14} className="text-gray-400 mr-1" />
+                      <span className="text-sm font-medium text-gray-900">
+                        {job.applicants || 0}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
-        {filteredJobs.map((job) => (
-          <Link
-            key={job.id}
-            to={`/organization/jobs/${job.id}`}
-            className="block bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div>
-              <h3 className="font-bold text-lg text-gray-900">{job.title}</h3>
-              <div className="flex items-center mt-1 text-sm text-gray-500">
-                <MapPin size={14} className="mr-1" />
-                <span>{job.location}</span>
-              </div>
-              <div className="flex items-center mt-1 text-sm text-gray-500">
-                <Calendar size={14} className="mr-1" />
-                <span>{job.postedDate}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-500">Job Type</p>
-                <p className="text-sm font-medium text-gray-900">
-                  {job.jobType}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <div className="flex items-center">
-                  {job.status === "Active" ? (
-                    <CheckCircle size={14} className="text-green-500 mr-1" />
-                  ) : (
-                    <XCircle size={14} className="text-gray-500 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs font-medium ${
-                      job.status === "Active"
-                        ? "text-green-800"
-                        : "text-gray-800"
-                    }`}
-                  >
-                    {job.status}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Applicants</p>
-                <div className="flex items-center">
-                  <Users size={14} className="text-gray-400 mr-1" />
-                  <span className="text-sm font-medium text-gray-900">
-                    {job.applicants}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+        </>
+      )}
 
       {/* Add Job Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
           <div
             className="absolute inset-0 bg-gray-500 bg-opacity-30 backdrop-blur-sm"
-            onClick={() => setIsAddModalOpen(false)}
+            onClick={() => !submitting && setIsAddModalOpen(false)}
           ></div>
           <div className="bg-white rounded-2xl w-full max-w-2xl p-6 relative z-10 border border-gray-200 shadow-xl max-h-screen overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">Add New Job</h2>
               <button
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => !submitting && setIsAddModalOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
+                disabled={submitting}
               >
                 <X size={24} />
               </button>
@@ -359,6 +419,7 @@ const JobManagement = () => {
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                     placeholder="e.g. Senior Frontend Developer"
+                    disabled={submitting}
                   />
                 </div>
 
@@ -372,6 +433,7 @@ const JobManagement = () => {
                       setNewJob({ ...newJob, jobType: e.target.value })
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
+                    disabled={submitting}
                   >
                     {jobTypes.map((type) => (
                       <option key={type} value={type}>
@@ -394,6 +456,7 @@ const JobManagement = () => {
                   }
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                   placeholder="e.g. San Francisco, CA or Remote"
+                  disabled={submitting}
                 />
               </div>
 
@@ -409,6 +472,7 @@ const JobManagement = () => {
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                   placeholder="Describe the role, responsibilities, etc."
+                  disabled={submitting}
                 />
               </div>
 
@@ -424,6 +488,7 @@ const JobManagement = () => {
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                   placeholder="List the required skills and experience"
+                  disabled={submitting}
                 />
               </div>
 
@@ -443,6 +508,7 @@ const JobManagement = () => {
                             type="button"
                             onClick={() => removeResponsibility(index)}
                             className="ml-2 p-2 text-red-500 hover:text-red-700"
+                            disabled={submitting}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -456,11 +522,13 @@ const JobManagement = () => {
                       onChange={(e) => setNewResponsibility(e.target.value)}
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                       placeholder="Add a responsibility"
+                      disabled={submitting}
                     />
                     <button
                       type="button"
                       onClick={addResponsibility}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+                      className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
+                      disabled={submitting}
                     >
                       Add
                     </button>
@@ -485,6 +553,7 @@ const JobManagement = () => {
                             type="button"
                             onClick={() => removeSkill(index)}
                             className="ml-1 text-blue-600 hover:text-blue-800"
+                            disabled={submitting}
                           >
                             <X size={14} />
                           </button>
@@ -499,11 +568,13 @@ const JobManagement = () => {
                     onChange={(e) => setNewSkill(e.target.value)}
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
                     placeholder="Add a skill"
+                    disabled={submitting}
                   />
                   <button
                     type="button"
                     onClick={addSkill}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    disabled={submitting}
                   >
                     Add
                   </button>
@@ -514,16 +585,27 @@ const JobManagement = () => {
             <div className="mt-8 flex justify-end gap-3">
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                disabled={submitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddJob}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center"
+                disabled={submitting}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg flex items-center disabled:opacity-50"
               >
-                <CheckCircle size={18} className="mr-2" />
-                Create Job
+                {submitting ? (
+                  <>
+                    <Loader size={18} className="mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={18} className="mr-2" />
+                    Create Job
+                  </>
+                )}
               </button>
             </div>
           </div>

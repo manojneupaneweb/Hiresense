@@ -17,7 +17,7 @@ import Dashboard from "./pages/organization/Dashboard.jsx";
 import Layout from "./pages/organization/Layout.jsx";
 import JobManagement from "./pages/organization/JobManagement.jsx";
 import JobDetails from "./pages/organization/JobDetails.jsx";
-import ViewApplicants from "./pages/organization/ViewApplicants.jsx";
+import ViewjobApplicants from "./pages/organization/ViewjobApplicants.jsx";
 import ViewDetails from "./pages/organization/ViewDetails.jsx";
 
 // User page
@@ -36,6 +36,7 @@ const router = createBrowserRouter([
       { path: "/pricing", element: <Pricing /> },
       { path: "/contact", element: <Contact /> },
       { path: "/work", element: <HowItWorks /> },
+      { path: "jobs/:id", element: <JobDetails /> },
 
       // Protected user route
       {
@@ -54,8 +55,7 @@ const router = createBrowserRouter([
     children: [
       { path: "dashboard", element: <Dashboard /> },
       { path: "jobs", element: <JobManagement /> },
-      { path: "jobs/:id", element: <JobDetails /> },
-      { path: "jobs/:id/applicants", element: <ViewApplicants /> },
+      { path: "jobs/:id/applicants", element: <ViewjobApplicants /> },
       { path: "jobs/:id/applicants/:applicantId", element: <ViewDetails /> },
     ],
   },

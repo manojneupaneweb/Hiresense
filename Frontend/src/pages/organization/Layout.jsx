@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate, Link } from "react-router-dom";
+import Logo from '../../../public/Hiresense.png'
 import {
   LayoutDashboard,
   Briefcase,
@@ -12,18 +13,65 @@ import {
   ChevronDown,
   Menu,
   X,
+  User,
+  LogOut,
 } from "lucide-react";
+import axios from "axios";
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [user, setUser] = useState({});
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
+  };
+
+  const fetchUser = async () => {
+    try {
+      const token = getCookie('accessToken') || localStorage.getItem('accessToken');
+      
+      if (!token) {
+        console.error('token not found');
+        return;
+      }
+
+      const response = await axios.get('/api/user/getuser', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear tokens from cookies and localStorage
+    document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+    localStorage.removeItem('accessToken');
+    navigate('/login');
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   // Determine active item based on current route
   const getActiveItem = () => {
     const path = location.pathname;
-    if (path.includes("organization/dashboard")) return "Dashboard";
-    if (path.includes("organization/jobs")) return "Jobs";
+    if (path.includes("dashboard")) return "Dashboard";
+    if (path.includes("jobs")) return "Jobs";
     if (path.includes("applicants")) return "Applicants";
     if (path.includes("interviews")) return "Interviews";
     if (path.includes("reports")) return "Reports";
@@ -46,6 +94,28 @@ const Layout = () => {
     { name: "Settings", icon: Settings, path: "/settings" },
   ];
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (profileDropdownOpen && !event.target.closest('.profile-dropdown')) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -56,11 +126,11 @@ const Layout = () => {
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
-            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-              <span className="text-white font-bold text-lg">AI</span>
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg">
+              <img src={Logo} alt="" />
             </div>
             <span className="ml-3 text-xl font-semibold text-gray-800">
-              InterviewAI
+              HireSence
             </span>
           </div>
           <button
@@ -75,9 +145,10 @@ const Layout = () => {
           {navigationItems.map((item) => {
             const Icon = item.icon;
             return (
-              <a
+              <Link
                 key={item.name}
-                href={item.path}
+                to={item.path}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center w-full px-6 py-3 text-left transition-colors duration-200 ${
                   activeItem === item.name
                     ? "bg-blue-50 text-blue-600 border-r-2 border-blue-600"
@@ -86,26 +157,11 @@ const Layout = () => {
               >
                 <Icon size={20} className="flex-shrink-0" />
                 <span className="mx-4 font-medium">{item.name}</span>
-              </a>
+              </Link>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-0 w-full p-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <img
-                className="w-10 h-10 rounded-full"
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt="Profile"
-              />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700">John Doe</p>
-              <p className="text-xs font-medium text-gray-500">Admin</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Main Content */}
@@ -133,44 +189,55 @@ const Layout = () => {
           </div>
 
           <div className="flex items-center">
-            <button className="p-2 text-gray-500 bg-gray-100 rounded-full hover:text-gray-700 hover:bg-gray-200">
-              <Bell size={20} />
-            </button>
-
-            <div className="relative ml-4">
+            <div className="relative ml-4 profile-dropdown flex gap-3" >
+              Hi, {user.fullName}
               <button
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 className="flex items-center max-w-xs rounded-full focus:outline-none"
+                aria-expanded={profileDropdownOpen}
+                aria-haspopup="true"
               >
-                <img
-                  className="w-8 h-8 rounded-full"
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                  alt="Profile"
-                />
+
+                {user.avatar ? (
+                  <img
+                    className="w-8 h-8 rounded-full"
+                    src={user.avatar}
+                    alt="Profile"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <User size={16} className="text-gray-500" />
+                  </div>
+                )}
                 <ChevronDown size={16} className="ml-1 text-gray-400" />
               </button>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 w-48 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
+                <div className="absolute right-0 w-48 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    <Link
+                      to="/profile"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setProfileDropdownOpen(false)}
                     >
+                      <User size={16} className="mr-2" />
                       Your Profile
-                    </a>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    </Link>
+                    <Link
+                      to="/settings"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setProfileDropdownOpen(false)}
                     >
+                      <Settings size={16} className="mr-2" />
                       Settings
-                    </a>
-                    <a
-                      href="#"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
+                      <LogOut size={16} className="mr-2" />
                       Sign out
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}

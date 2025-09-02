@@ -1,293 +1,192 @@
-import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import {
-  MapPin,
-  Users,
-  Calendar,
-  Briefcase,
-  ArrowLeft,
-  Edit3,
-  FileText,
-  CheckCircle,
-  XCircle,
-  DollarSign,
-  Clock,
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import { Loader, AlertCircle, MapPin, Calendar, Users, Clock, Building, DollarSign, BookOpen } from 'lucide-react';
 
-const JobDetails = () => {
+function JobDetails() {
   const { id } = useParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Sample job data - in a real app, you would fetch this from an API
-  const sampleJobs = [
-    {
-      id: 1,
-      title: "Senior Frontend Developer",
-      jobType: "Full-time",
-      location: "San Francisco, CA",
-      postedDate: "2023-10-15",
-      status: "Active",
-      applicants: 42,
-      description:
-        "We are looking for an experienced frontend developer with React expertise to join our growing team. You will be responsible for building user-facing features and ensuring the technical feasibility of UI/UX designs.",
-      requirements:
-        "5+ years experience with React, TypeScript, and modern CSS frameworks. Experience with state management libraries (Redux, MobX) and testing frameworks (Jest, Cypress). Strong understanding of web performance optimization.",
-      salary: "$120,000 - $150,000",
-      experience: "Senior Level",
-      responsibilities: [
-        "Develop new user-facing features using React.js",
-        "Build reusable components and front-end libraries for future use",
-        "Translate designs and wireframes into high-quality code",
-        "Optimize components for maximum performance across browsers",
-        "Collaborate with back-end developers and web designers",
-      ],
-      skills: ["React", "TypeScript", "JavaScript", "CSS", "HTML", "Redux"],
-    },
-    {
-      id: 2,
-      title: "Product Manager",
-      jobType: "Full-time",
-      location: "New York, NY",
-      postedDate: "2023-10-10",
-      status: "Active",
-      applicants: 28,
-      description:
-        "Lead product initiatives and work with cross-functional teams to deliver exceptional products that meet customer needs and business goals.",
-      requirements:
-        "3+ years of product management experience, strong analytical skills, and experience with Agile methodology. Computer Science background or technical experience is preferred.",
-      salary: "$130,000 - $160,000",
-      experience: "Mid Level",
-      responsibilities: [
-        "Define product vision, strategy, and roadmap",
-        "Gather and prioritize product and customer requirements",
-        "Work closely with engineering teams to deliver with quick time-to-market",
-        "Drive product launches including working with marketing team",
-        "Develop product pricing and positioning strategies",
-      ],
-      skills: [
-        "Product Management",
-        "Agile",
-        "Analytics",
-        "Strategy",
-        "User Research",
-      ],
-    },
-    {
-      id: 3,
-      title: "UX Designer",
-      jobType: "Contract",
-      location: "Austin, TX",
-      postedDate: "2023-09-25",
-      status: "Closed",
-      applicants: 35,
-      description:
-        "Create beautiful and functional user experiences for our products. You'll work closely with product managers and developers to design intuitive interfaces.",
-      requirements:
-        "Strong portfolio demonstrating UX/UI design skills, 4+ years experience in UX design, proficiency in Figma, Sketch, or similar design tools.",
-      salary: "$90,000 - $110,000",
-      experience: "Mid Level",
-      responsibilities: [
-        "Create user-centered designs by considering market analysis and customer feedback",
-        "Use sitemaps, process flows, and storyboards to illustrate design ideas",
-        "Design graphic user interface elements like menus, tabs, and widgets",
-        "Build page navigation buttons and search fields",
-        "Develop UI mockups and prototypes that clearly illustrate how sites function",
-      ],
-      skills: [
-        "Figma",
-        "UI/UX Design",
-        "Wireframing",
-        "Prototyping",
-        "User Research",
-      ],
-    },
-    {
-      id: 4,
-      title: "Data Scientist",
-      jobType: "Remote",
-      location: "Remote",
-      postedDate: "2023-10-05",
-      status: "Active",
-      applicants: 51,
-      description:
-        "Build machine learning models to derive insights from our data. You'll work with large datasets and help shape our data strategy.",
-      requirements:
-        "Strong programming skills in Python, experience with SQL and ML frameworks (TensorFlow, PyTorch), strong statistical knowledge, and experience with data visualization tools.",
-      salary: "$110,000 - $140,000",
-      experience: "Senior Level",
-      responsibilities: [
-        "Develop machine learning models to solve business problems",
-        "Implement predictive models and algorithms",
-        "Process, clean, and verify the integrity of data used for analysis",
-        "Create data visualizations to communicate findings",
-        "Collaborate with engineering teams to implement models in production",
-      ],
-      skills: [
-        "Python",
-        "Machine Learning",
-        "SQL",
-        "TensorFlow",
-        "Data Analysis",
-        "Statistics",
-      ],
-    },
-  ];
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate API fetch
-    const fetchJob = () => {
-      const foundJob = sampleJobs.find((job) => job.id === parseInt(id));
-      setJob(foundJob);
-      setLoading(false);
+    const fetchJobDetails = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('accessToken');
+        
+        const response = await axios.get(`/api/job/jobdetails/${id}`, {
+         headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          withCredentials: true,
+        });
+
+        setJob(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching job details:', err);
+        setError(err.response?.data?.message || 'Failed to load job details');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchJob();
+    if (id) {
+      fetchJobDetails();
+    }
   }, [id]);
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <Loader size={32} className="animate-spin text-blue-500" />
+        <span className="ml-2 text-gray-600">Loading job details...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center p-4 bg-red-50 text-red-700 rounded-xl mb-6">
+          <AlertCircle size={20} className="mr-2" />
+          {error}
+        </div>
       </div>
     );
   }
 
   if (!job) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-2xl font-bold text-gray-900">Job Not Found</h2>
-        <p className="text-gray-600 mt-2">
-          The job you're looking for doesn't exist.
-        </p>
-        <Link
-          to={`/organization/jobs`}
-          className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-800"
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Back to Jobs
-        </Link>
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="text-center py-12">
+          <p className="text-gray-500">Job not found</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <Link
-        to="/organization/jobs"
-        className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-6"
-      >
-        <ArrowLeft size={16} className="mr-2" />
-        Back to Jobs
-      </Link>
-
-      <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
+    <div className="max-w-4xl mx-auto p-6">
+      {/* Header Section */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{job.title}</h1>
-            <div className="flex items-center mt-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{job.title}</h1>
+            <div className="flex flex-wrap items-center gap-4 text-gray-600">
+              <div className="flex items-center">
+                <Building size={16} className="mr-1" />
+                <span>{job.jobType}</span>
+              </div>
+              <div className="flex items-center">
+                <MapPin size={16} className="mr-1" />
+                <span>{job.location}</span>
+              </div>
+              <div className="flex items-center">
+                <DollarSign size={16} className="mr-1" />
+                <span>Competitive Salary</span>
+              </div>
+            </div>
+          </div>
+          <button className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors">
+            Apply Now
+          </button>
+        </div>
+      </div>
+
+      {/* Job Details Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Posted Date */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center mb-3">
+            <Calendar size={20} className="text-blue-500 mr-2" />
+            <h3 className="font-semibold text-gray-900">Posted Date</h3>
+          </div>
+          <p className="text-gray-600">
+            {job.postedDate ? new Date(job.postedDate).toLocaleDateString() : 'Not specified'}
+          </p>
+        </div>
+
+        {/* Applicants */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center mb-3">
+            <Users size={20} className="text-green-500 mr-2" />
+            <h3 className="font-semibold text-gray-900">Applicants</h3>
+          </div>
+          <p className="text-gray-600">{job.applicants || 0} applicants</p>
+        </div>
+
+        {/* Status */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center mb-3">
+            <Clock size={20} className="text-purple-500 mr-2" />
+            <h3 className="font-semibold text-gray-900">Status</h3>
+          </div>
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+            job.status === 'Active' 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {job.status || 'Unknown'}
+          </span>
+        </div>
+      </div>
+
+      {/* Description Section */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <div className="flex items-center mb-4">
+          <BookOpen size={20} className="text-blue-500 mr-2" />
+          <h2 className="text-xl font-semibold text-gray-900">Job Description</h2>
+        </div>
+        <div className="prose max-w-none">
+          <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
+        </div>
+      </div>
+
+      {/* Requirements Section */}
+      {job.requirements && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Requirements</h2>
+          <div className="prose max-w-none">
+            <p className="text-gray-700 whitespace-pre-wrap">{job.requirements}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Responsibilities Section */}
+      {job.responsibilities && job.responsibilities.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Responsibilities</h2>
+          <ul className="space-y-2">
+            {job.responsibilities.map((responsibility, index) => (
+              <li key={index} className="flex items-start">
+                <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                <span className="text-gray-700">{responsibility}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Skills Section */}
+      {job.skills && job.skills.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Required Skills</h2>
+          <div className="flex flex-wrap gap-2">
+            {job.skills.map((skill, index) => (
               <span
-                className={`px-3 py-1 text-xs font-medium rounded-full ${
-                  job.status === "Active"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
+                key={index}
+                className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
               >
-                {job.status}
+                {skill}
               </span>
-              <span className="mx-2 text-gray-400">•</span>
-              <span className="text-gray-600">{job.experience}</span>
-            </div>
+            ))}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-          <div className="flex items-center">
-            <Briefcase size={18} className="text-gray-400 mr-3" />
-            <span>{job.jobType}</span>
-          </div>
-          <div className="flex items-center">
-            <MapPin size={18} className="text-gray-400 mr-3" />
-            <span>{job.location}</span>
-          </div>
-          <div className="flex items-center">
-            <DollarSign size={18} className="text-gray-400 mr-3" />
-            <span>{job.salary}</span>
-          </div>
-          <div className="flex items-center">
-            <Users size={18} className="text-gray-400 mr-3" />
-            <span>{job.applicants} Applicants</span>
-          </div>
-          <div className="flex items-center">
-            <Calendar size={18} className="text-gray-400 mr-3" />
-            <span>Posted on {job.postedDate}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Job Description
-            </h2>
-            <p className="text-gray-700">{job.description}</p>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Responsibilities
-            </h2>
-            <ul className="list-disc list-inside space-y-2 text-gray-700">
-              {job.responsibilities.map((responsibility, index) => (
-                <li key={index}>{responsibility}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Requirements
-            </h2>
-            <p className="text-gray-700">{job.requirements}</p>
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Skills Required
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {job.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Job Actions
-            </h2>
-            <div className="space-y-3">
-              <Link
-                to={`/organization/jobs/${job.id}/applicants`}
-                className="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 transition-all"
-              >
-                <Users size={18} className="mr-2" />
-                View Applicants
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
-};
+}
 
 export default JobDetails;
