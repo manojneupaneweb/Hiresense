@@ -42,37 +42,55 @@ const generateAccessRefreshToken = async (userId) => {
 
 const registerUser = async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const { fullName, email, password, role } = req.body;
 
-    if (!fullName || !email || !password) {
+    // Validate required fields
+    if (!fullName || !email || !password || !role) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    if (!["candidate", "recruiter"].includes(role)) {
+      return res.status(400).json({ message: "Invalid user role" });
+    }
+
+    // Check for avatar
     const localFilePath = req.files?.avatar?.[0]?.path;
+    
     if (!localFilePath) {
-      return res.status(400).json({ message: "Profile picture is required" });
+      return res.status(400).json({ message: "Avatar is required" });
     }
 
     const avatarUrl = await uploadOnCloudinary(localFilePath);
 
-    const existingUser = await User.findOne({ where: { email } });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Default payment type for candidate is null
+    const paymenttype = role === "candidate" ? null : null; // recruiter updates after payment
+
+    // Create user
     const newUser = await User.create({
       fullName,
       email,
       password: hashedPassword,
       avatar: avatarUrl,
+      role,
+      paymenttype,
     });
 
-    return res.status(201).json({ message: "User created successfully!", user: newUser });
+    return res.status(201).json({
+      message: "User created successfully!",
+      user: newUser,
+    });
 
   } catch (error) {
-    console.log('Error registering user:', error);
+    console.error("Error registering user:", error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -135,19 +153,9 @@ const getUserProfile = async (req, res) => {
 };
 
 
-const logOutUser = async (req, res, next) => {
-  // try {
-  //   res.clearCookie("accessToken", cookieOption);
-  //   res.clearCookie("refreshToken", cookieOption);
-  //   return res.status(200, { message: "User logged out successfully" });
-  // } catch (error) {
-  //   next(error);
-  // }
-};
 
 export {
   registerUser,
-  loginUser,
-  logOutUser,
+  loginUser, 
   getUserProfile
 }

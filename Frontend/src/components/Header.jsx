@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
+import Logo from '../../public/Hiresense.png';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -18,25 +19,53 @@ const Header = () => {
     { name: 'Contact', href: '/contact' },
   ];
 
-  // Check if user is already logged in on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  }, [user]);
+
   const checkAuthStatus = async () => {
-    const token = getCookie('accessToken');
+    // First check if we have user data in localStorage
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Error parsing saved user data:', e);
+        localStorage.removeItem('user');
+      }
+    }
+
+    const token = getCookie('accessToken') || localStorage.getItem('accessToken');
     if (token) {
       try {
+        console.log('Checking authentication status...');
         const response = await axios.get('/api/user/getuser', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        setUser(response.data);
+        console.log('Header user data:', response.data);
+        setUser(response.data.user);
+        // Save user data to localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
       } catch (error) {
         console.error('Error fetching user data:', error);
-        handleLogout();
+        // Clear invalid user data
+        localStorage.removeItem('user');
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          handleLogout();
+        }
       }
+    } else {
+      console.log('No authentication token found');
+      // Clear any existing user data if no token
+      localStorage.removeItem('user');
     }
   };
 
@@ -50,14 +79,15 @@ const Header = () => {
   const handleLogin = async (credentials) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/login', credentials);
+      const response = await axios.post('/api/user/login', credentials);
       const { user: userData, token } = response.data;
-      
+
       // Set token in cookie
       document.cookie = `accessToken=${token}; path=/; max-age=86400`; // 1 day
-      
+
       setUser(userData);
       setActiveForm(null);
+      setIsUserMenuOpen(false);
       toast.success(`Welcome back, ${userData.fullName}!`);
     } catch (error) {
       console.error('Login error:', error);
@@ -68,36 +98,55 @@ const Header = () => {
   };
 
   const handleSignup = async (userData) => {
-    setLoading(true);
-    try {
-      const response = await axios.post('/api/auth/signup', userData);
-      const { user: newUser, token } = response.data;
-      
-      // Set token in cookie
-      document.cookie = `accessToken=${token}; path=/; max-age=86400`; // 1 day
-      
-      setUser(newUser);
-      setActiveForm(null);
-      toast.success(`Account created successfully! Welcome, ${newUser.fullName}!`);
-    } catch (error) {
-      console.error('Signup error:', error);
-      toast.error(error.response?.data?.message || 'Signup failed. Please try again.');
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    console.log("signin : ", userData);
+
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append("fullName", userData.fullName);
+    formData.append("email", userData.email);
+    formData.append("password", userData.password);
+    formData.append("role", userData.role);
+
+    // Append avatar file
+    if (userData.avatar) {
+      formData.append("avatar", userData.avatar); // avatar must be a File object
     }
-  };
+
+    const response = await axios.post("/api/user/register", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    const { user: newUser, token } = response.data;
+    console.log("signup response :", response);
+
+    document.cookie = `accessToken=${token}; path=/; max-age=86400`;
+    setUser(newUser);
+    setActiveForm(null);
+    setIsUserMenuOpen(false);
+    toast.success(`Account created successfully! Welcome, ${newUser.fullName}!`);
+  } catch (error) {
+    console.error("Signup error:", error);
+    toast.error(error.response?.data?.message || "Signup failed. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleLogout = () => {
-    // Clear cookies
+    // Clear cookies and storage
     document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    // Reset user state
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('accessToken');
+
     setUser(null);
-    
-    // Close user menu
     setIsUserMenuOpen(false);
-    
     toast.info('You have been logged out');
+    window.location.href = '/';
   };
 
   const handleOverlayClick = (e) => {
@@ -106,7 +155,7 @@ const Header = () => {
     }
   };
 
-  const isOrganization = user && user.role === 'organization';
+  const isOrganization = user && user.role === 'recruiter';
 
   return (
     <>
@@ -122,20 +171,22 @@ const Header = () => {
         pauseOnHover
         theme="light"
       />
-      
+
       <header className="bg-white shadow-md relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-r from-[#0097b2] to-[#2bbcef]">
-                <span className="text-white font-bold text-lg">H</span>
+            <a href="/">
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center">
+                  <img src={Logo} className='w-10' alt="Hiresense Logo" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                  Hiresence
+                </span>
               </div>
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-[#0097b2] to-[#2bbcef] bg-clip-text text-transparent">
-                Hiresense
-              </span>
-            </div>
-            
+            </a>
+
             {/* Desktop Navigation */}
             <div className="hidden md:block ml-10">
               <nav className="flex space-x-4">
@@ -143,15 +194,15 @@ const Header = () => {
                   <a
                     key={link.name}
                     href={link.href}
-                    className="text-gray-600 hover:text-[#0097b2] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 relative group"
+                    className="text-gray-600 hover:text-blue-500 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 relative group"
                   >
                     {link.name}
-                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#0097b2] transition-all duration-200 group-hover:w-full"></span>
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-200 group-hover:w-full"></span>
                   </a>
                 ))}
               </nav>
             </div>
-            
+
             {/* User section */}
             <div className="hidden md:block relative">
               {user ? (
@@ -159,30 +210,32 @@ const Header = () => {
                   <span className="mr-4 text-gray-700">Hi, {user.fullName}</span>
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
+                    className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform duration-200 hover:scale-110"
                   >
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-md cursor-pointer">
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.fullName} className="h-10 w-10 rounded-full" />
                       ) : (
-                        <i className="fas fa-user text-white"></i>
+                        <span className="text-white text-sm font-medium">
+                          {user.fullName ? user.fullName.charAt(0).toUpperCase() : 'U'}
+                        </span>
                       )}
                     </div>
                   </button>
 
                   {isUserMenuOpen && (
-                    <div className="origin-top-right absolute right-0 mt-3 w-48 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                    <div className="origin-top-right absolute right-0 top-10 mt-3 w-48 rounded-lg shadow-lg py-2 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                       {isOrganization ? (
                         <>
                           <a
-                            href="/dashboard"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                            href="/organization/dashboard"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200"
                           >
                             <i className="fas fa-tachometer-alt mr-2"></i>Dashboard
                           </a>
                           <button
                             onClick={handleLogout}
-                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200"
                           >
                             <i className="fas fa-sign-out-alt mr-2"></i>Sign out
                           </button>
@@ -191,19 +244,19 @@ const Header = () => {
                         <>
                           <a
                             href="/profile"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200"
                           >
                             <i className="fas fa-user-circle mr-2"></i>Your Profile
                           </a>
                           <a
                             href="/settings"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200"
                           >
                             <i className="fas fa-cog mr-2"></i>Settings
                           </a>
                           <button
                             onClick={handleLogout}
-                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200"
+                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200"
                           >
                             <i className="fas fa-sign-out-alt mr-2"></i>Sign out
                           </button>
@@ -215,10 +268,10 @@ const Header = () => {
               ) : (
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2bbcef] transition-transform duration-200 hover:scale-110"
+                  className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-transform duration-200 hover:scale-110"
                 >
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] flex items-center justify-center shadow-md cursor-pointer">
-                    <i className="fas fa-user text-white"></i>
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-md cursor-pointer">
+                    <span className="text-white text-sm font-medium">U</span>
                   </div>
                 </button>
               )}
@@ -230,7 +283,7 @@ const Header = () => {
                       setActiveForm('login');
                       setIsUserMenuOpen(false);
                     }}
-                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200 flex items-center"
+                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200 flex items-center"
                   >
                     <i className="fas fa-sign-in-alt mr-2"></i>Login
                   </button>
@@ -239,7 +292,7 @@ const Header = () => {
                       setActiveForm('signup');
                       setIsUserMenuOpen(false);
                     }}
-                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#0097b2] transition-colors duration-200 flex items-center"
+                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-blue-500 transition-colors duration-200 flex items-center"
                   >
                     <i className="fas fa-user-plus mr-2"></i>Sign Up
                   </button>
@@ -251,9 +304,18 @@ const Header = () => {
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-[#0097b2] hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#2bbcef]"
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-blue-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-500"
               >
-                <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-lg`}></i>
+                <span className="sr-only">Open main menu</span>
+                {isMenuOpen ? (
+                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -267,7 +329,7 @@ const Header = () => {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-gray-600 hover:text-[#0097b2] block px-3 py-2 rounded-md text-base font-medium"
+                  className="text-gray-600 hover:text-blue-500 block px-3 py-2 rounded-md text-base font-medium"
                 >
                   {link.name}
                 </a>
@@ -282,36 +344,36 @@ const Header = () => {
                       <>
                         <a
                           href="/dashboard"
-                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                         >
-                          <i className="fas fa-tachometer-alt mr-2"></i>Dashboard
+                          Dashboard
                         </a>
                         <button
                           onClick={handleLogout}
-                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                         >
-                          <i className="fas fa-sign-out-alt mr-2"></i>Sign Out
+                          Sign Out
                         </button>
                       </>
                     ) : (
                       <>
                         <a
                           href="/profile"
-                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                         >
-                          <i className="fas fa-user-circle mr-2"></i>Your Profile
+                          Your Profile
                         </a>
                         <a
                           href="/settings"
-                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                          className="block rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                         >
-                          <i className="fas fa-cog mr-2"></i>Settings
+                          Settings
                         </a>
                         <button
                           onClick={handleLogout}
-                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                          className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                         >
-                          <i className="fas fa-sign-out-alt mr-2"></i>Sign Out
+                          Sign Out
                         </button>
                       </>
                     )}
@@ -323,18 +385,18 @@ const Header = () => {
                         setActiveForm('login');
                         setIsMenuOpen(false);
                       }}
-                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                     >
-                      <i className="fas fa-sign-in-alt mr-2"></i>Login
+                      Login
                     </button>
                     <button
                       onClick={() => {
                         setActiveForm('signup');
                         setIsMenuOpen(false);
                       }}
-                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-[#0097b2] hover:bg-gray-50"
+                      className="block w-full text-left rounded-md px-3 py-2 text-base font-medium text-gray-600 hover:text-blue-500 hover:bg-gray-50"
                     >
-                      <i className="fas fa-user-plus mr-2"></i>Sign Up
+                      Sign Up
                     </button>
                   </>
                 )}
@@ -346,7 +408,7 @@ const Header = () => {
 
       {/* Auth Form Overlay */}
       {activeForm && (
-        <div 
+        <div
           className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4 z-50"
           onClick={handleOverlayClick}
         >
@@ -355,14 +417,16 @@ const Header = () => {
               <h3 className="text-xl font-semibold text-gray-800">
                 {activeForm === 'login' ? 'Login to Your Account' : 'Create an Account'}
               </h3>
-              <button 
+              <button
                 onClick={() => setActiveForm(null)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <i className="fas fa-times text-lg"></i>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
               </button>
             </div>
-            
+
             <div className="px-6 py-5">
               {activeForm === 'login' ? (
                 <LoginForm onSubmit={handleLogin} loading={loading} />
@@ -370,13 +434,13 @@ const Header = () => {
                 <SignupForm onSubmit={handleSignup} loading={loading} />
               )}
             </div>
-            
+
             <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-200/50">
               <p className="text-sm text-center text-gray-600">
                 {activeForm === 'login' ? "Don't have an account? " : "Already have an account? "}
-                <button 
+                <button
                   onClick={() => setActiveForm(activeForm === 'login' ? 'signup' : 'login')}
-                  className="font-medium text-[#0097b2] hover:text-[#007a9b] transition-colors"
+                  className="font-medium text-blue-500 hover:text-blue-700 transition-colors"
                 >
                   {activeForm === 'login' ? 'Sign up' : 'Sign in'}
                 </button>
@@ -389,7 +453,6 @@ const Header = () => {
   );
 };
 
-// Login Form Component
 const LoginForm = ({ onSubmit, loading }) => {
   const [credentials, setCredentials] = useState({
     email: '',
@@ -420,7 +483,7 @@ const LoginForm = ({ onSubmit, loading }) => {
           name="email"
           value={credentials.email}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
           required
         />
       </div>
@@ -434,14 +497,14 @@ const LoginForm = ({ onSubmit, loading }) => {
           name="password"
           value={credentials.password}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
           required
         />
       </div>
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-[#0097b2] disabled:opacity-50"
+        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
       >
         {loading ? 'Signing in...' : 'Sign In'}
       </button>
@@ -449,14 +512,14 @@ const LoginForm = ({ onSubmit, loading }) => {
   );
 };
 
-// Signup Form Component
 const SignupForm = ({ onSubmit, loading }) => {
   const [userData, setUserData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    userType: 'candidate' // candidate or organization
+    fullName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "candidate",
+    avatar: null,
   });
 
   const handleSubmit = (e) => {
@@ -471,14 +534,18 @@ const SignupForm = ({ onSubmit, loading }) => {
   const handleChange = (e) => {
     setUserData({
       ...userData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Full Name */}
       <div>
-        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="fullName"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Full Name
         </label>
         <input
@@ -487,12 +554,19 @@ const SignupForm = ({ onSubmit, loading }) => {
           name="fullName"
           value={userData.fullName}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                     outline-none transition-colors"
           required
         />
       </div>
+
+      {/* Email */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Email Address
         </label>
         <input
@@ -501,27 +575,41 @@ const SignupForm = ({ onSubmit, loading }) => {
           name="email"
           value={userData.email}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                     outline-none transition-colors"
           required
         />
       </div>
-      <div>
-        <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-1">
+
+      {/* Role */}
+      <div className="mb-4">
+        <label
+          htmlFor="role"
+          className="block text-sm font-semibold text-gray-800 mb-2"
+        >
           I am a
         </label>
         <select
-          id="userType"
-          name="userType"
-          value={userData.userType}
+          id="role"
+          name="role"
+          value={userData.role}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm 
+                     focus:outline-none focus:ring-2 focus:ring-blue-500 
+                     focus:border-blue-500 bg-white text-gray-700 transition-all"
         >
-          <option value="candidate">Job Seeker</option>
-          <option value="organization">Employer</option>
+          <option value="candidate">Candidate</option>
+          <option value="recruiter">Recruiter</option>
         </select>
       </div>
+
+      {/* Password */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Password
         </label>
         <input
@@ -530,12 +618,19 @@ const SignupForm = ({ onSubmit, loading }) => {
           name="password"
           value={userData.password}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                     outline-none transition-colors"
           required
         />
       </div>
+
+      {/* Confirm Password */}
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="confirmPassword"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Confirm Password
         </label>
         <input
@@ -544,19 +639,57 @@ const SignupForm = ({ onSubmit, loading }) => {
           name="confirmPassword"
           value={userData.confirmPassword}
           onChange={handleChange}
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#0097b2] focus:border-[#0097b2] outline-none transition-colors"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                     outline-none transition-colors"
           required
         />
       </div>
+
+      {/* Avatar Upload */}
+      <div>
+        <label
+          htmlFor="avatar"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Upload Avatar
+        </label>
+        <input
+          type="file"
+          id="avatar"
+          name="avatar"
+          accept="image/*"
+          onChange={(e) =>
+            setUserData({ ...userData, avatar: e.target.files[0] })
+          }
+          className="w-full px-3 py-2 border border-gray-300 rounded-md 
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                     outline-none transition-colors"
+        />
+        {userData.avatar && (
+          <img
+            src={URL.createObjectURL(userData.avatar)}
+            alt="Avatar Preview"
+            className="mt-2 w-16 h-16 rounded-full object-cover border"
+          />
+        )}
+      </div>
+
+      {/* Submit Button */}
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-gradient-to-r from-[#0097b2] to-[#2bbcef] text-white py-2 px-4 rounded-md hover:opacity-90 transition-opacity focus:ring-2 focus:ring-offset-2 focus:ring-[#0097b2] disabled:opacity-50"
+        className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 
+                   text-white py-2 px-4 rounded-md hover:opacity-90 
+                   transition-opacity focus:ring-2 focus:ring-offset-2 
+                   focus:ring-blue-500 disabled:opacity-50"
       >
-        {loading ? 'Creating Account...' : 'Create Account'}
+        {loading ? "Creating Account..." : "Create Account"}
       </button>
     </form>
   );
 };
+
+
 
 export default Header;

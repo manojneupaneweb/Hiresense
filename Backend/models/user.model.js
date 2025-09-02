@@ -24,9 +24,14 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ["candidate", "recruiter"],
+      required: true
     },
+    paymenttype: {
+      type: String,
+      default: null
+    }
+
   },
   { timestamps: true }
 );
