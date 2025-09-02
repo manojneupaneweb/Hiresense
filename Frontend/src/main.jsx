@@ -15,6 +15,7 @@ import Layout from "./pages/organization/Layout.jsx";
 import JobManagement from "./pages/organization/JobManagement.jsx";
 import JobDetails from "./pages/organization/JobDetails.jsx";
 import ViewApplicants from "./pages/organization/ViewApplicants.jsx";
+import ViewDetails from "./pages/organization/ViewDetails.jsx";
 
 axios.defaults.baseURL = "http://localhost:8000";
 axios.defaults.withCredentials = true;
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: "jobs", element: <JobManagement /> },
       { path: "jobs/:id", element: <JobDetails /> },
       { path: "jobs/:id/applicants", element: <ViewApplicants /> },
+      { path: "jobs/:id/applicants/:applicantId", element: <ViewDetails /> },
       // ... other child routes
     ],
   },

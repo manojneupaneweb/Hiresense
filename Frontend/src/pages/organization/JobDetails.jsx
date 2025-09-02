@@ -161,7 +161,7 @@ const JobDetails = () => {
           The job you're looking for doesn't exist.
         </p>
         <Link
-          to="/jobs"
+          to={`/organization/jobs`}
           className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-800"
         >
           <ArrowLeft size={16} className="mr-2" />
