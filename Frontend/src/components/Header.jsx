@@ -44,13 +44,11 @@ const Header = () => {
     const token = getCookie('accessToken') || localStorage.getItem('accessToken');
     if (token) {
       try {
-        console.log('Checking authentication status...');
         const response = await axios.get('/api/user/getuser', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        console.log('user data:', response.data);
         setUser(response.data.user);
         // Save user data to localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -102,7 +100,6 @@ const Header = () => {
   const handleSignup = async (userData) => {
   setLoading(true);
   try {
-    console.log("signin : ", userData);
 
     // Create FormData for file upload
     const formData = new FormData();
@@ -123,7 +120,6 @@ const Header = () => {
     });
 
     const { user: newUser, token } = response.data;
-    console.log("signup response :", response);
 
     document.cookie = `accessToken=${token}; path=/; max-age=86400`;
     setUser(newUser);

@@ -1,22 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, redirect, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { Loader, AlertCircle, MapPin, Calendar, Users, Clock, Building, DollarSign, BookOpen } from 'lucide-react';
+import VerifyUser from '../../../utils/verifyuser';
+import { ToastContainer, toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+
 
 function JobDetails() {
   const { id } = useParams();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+ const navigate = useNavigate();
+ 
   useEffect(() => {
     const fetchJobDetails = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('accessToken');
-        
+
         const response = await axios.get(`/api/job/jobdetails/${id}`, {
-         headers: {
+          headers: {
             Authorization: `Bearer ${token}`,
           },
           withCredentials: true,
@@ -45,6 +50,34 @@ function JobDetails() {
       </div>
     );
   }
+  const handleApplyButton = async (job) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.error("Token not found");
+        toast.error('Please login first');
+        return;
+      }
+
+      const response = await axios.get('/api/user/verifyuser', {
+        withCredentials: true,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const userRole = response.data.user.role;
+      if (userRole === 'recruiter') {
+        toast.error(`As a ${userRole} you cannot apply for the job`);
+        return;
+      }
+
+      navigate(`/jobs/${job._id}/apply`);
+    } catch (error) {
+      console.error("Error verifying user: ", error.response?.data?.message || error.message);
+    }
+  };
+
+
+
 
   if (error) {
     return (
@@ -69,6 +102,7 @@ function JobDetails() {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      <ToastContainer />
       {/* Header Section */}
       <div className="bg-white rounded-2xl p-6 shadow-sm mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -89,9 +123,15 @@ function JobDetails() {
               </div>
             </div>
           </div>
-          <button className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors">
+          <button
+            className="px-3 py-1 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition"
+            onClick={() => handleApplyButton(job)} // wrap in arrow function
+          >
             Apply Now
           </button>
+
+
+
         </div>
       </div>
 
@@ -123,11 +163,10 @@ function JobDetails() {
             <Clock size={20} className="text-purple-500 mr-2" />
             <h3 className="font-semibold text-gray-900">Status</h3>
           </div>
-          <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-            job.status === 'Active' 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
+          <span className={`px-3 py-1 text-sm font-medium rounded-full ${job.status === 'Active'
+            ? 'bg-green-100 text-green-800'
+            : 'bg-gray-100 text-gray-800'
+            }`}>
             {job.status || 'Unknown'}
           </span>
         </div>

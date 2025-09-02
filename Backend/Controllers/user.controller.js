@@ -55,7 +55,7 @@ const registerUser = async (req, res) => {
 
     // Check for avatar
     const localFilePath = req.files?.avatar?.[0]?.path;
-    
+
     if (!localFilePath) {
       return res.status(400).json({ message: "Avatar is required" });
     }
@@ -152,10 +152,27 @@ const getUserProfile = async (req, res) => {
   });
 };
 
+const verifyUser = async (req, res) => {
+  const userId = req.user.id;
+
+  const user = await User.findById(userId).select("-email -password -refreshToken");
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "This is a verified user!",
+    user
+  });
+}
+
 
 
 export {
   registerUser,
-  loginUser, 
-  getUserProfile
+  loginUser,
+  getUserProfile,
+  verifyUser
 }

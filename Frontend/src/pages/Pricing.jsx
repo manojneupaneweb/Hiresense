@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { initiateKhaltiPayment } from "../../utils/payment";
+import { ToastContainer,toast } from "react-toastify";
+import axios from "axios";
 
 function Pricing() {
   const [billingCycle, setBillingCycle] = useState("monthly"); // monthly or annual
@@ -81,31 +83,43 @@ function Pricing() {
     return `$${price.toLocaleString("en-US")}`;
   };
 
-  const handlePayment = (plan) => {
-    if (plan.name === "Enterprise") {
-      // For Enterprise plan, redirect to contact page instead of payment
-      window.location.href = "/contact";
+const handlePayment = async (plan) => {
+  try {
+   const token = localStorage.getItem("accessToken"); // or wherever your token is
+
+const res = await axios.get("/api/user/getuser", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+  withCredentials: true,
+});
+
+    const user = res.data.user;
+
+    if (user.role !== "recruiter") {
+      toast.error("Only recruiters can purchase this plan");
       return;
     }
 
-    // Calculate price based on billing cycle and currency
     const price = billingCycle === "monthly" ? plan.monthlyPrice : plan.annualPrice;
-    const amount = currency === "USD" ? price * exchangeRate * 100 : price * 100; // Convert to paisa
-    
-    // Generate a unique product ID (you might want to use a different logic)
+    const amount = currency === "USD" ? price * exchangeRate * 100 : price * 100;
     const productId = `${plan.name}-${billingCycle}-${Date.now()}`;
-    
-    // Determine redirect URL based on success
     const redirectUrl = `${window.location.origin}/payment-success`;
-    
+
     console.log("Initiating payment for:", plan.name, "Amount:", amount, "Product ID:", productId);
-    
+
     // Initiate Khalti payment
     initiateKhaltiPayment(amount, productId, redirectUrl);
-  };
+  } catch (err) {
+    // 4️⃣ If token missing / request fails
+    toast.error("Please login to continue");
+    console.error("Error fetching user:", err);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <ToastContainer/>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">

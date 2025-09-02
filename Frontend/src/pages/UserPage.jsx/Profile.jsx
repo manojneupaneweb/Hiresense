@@ -14,7 +14,7 @@ function Profile() {
       setError('No authentication token found. Please log in.');
       setLoading(false);
       return;
-    }
+    }   
 
     const fetchUser = async () => {
       try {

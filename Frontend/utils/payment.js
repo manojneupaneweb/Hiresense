@@ -11,7 +11,7 @@ export const initiateKhaltiPayment = async (amount, productId, redirectLink) => 
             redirectLink: redirectLink || "paymentsuccess",
         };
 
-        const response = await axios.post("/api/v1/payment/khalti/initiate", payload, {
+        const response = await axios.post("/api/payment/khalti/initiate", payload, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
                 "Content-Type": "application/json"

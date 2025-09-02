@@ -299,7 +299,13 @@ function Jobs() {
                   <div className="text-sm text-gray-500">
                     {job.postedDate ? new Date(job.postedDate).toLocaleDateString() : "Recent"} • {job.applicants || 0} applicants
                   </div>
-                  <Link to={`/jobs/${job._id}`}>View Details</Link>
+                  <Link
+  className="px-3 py-1 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition"
+  to={`/jobs/${job._id}`}
+>
+  View Details
+</Link>
+
 
                 </div>
               </div>

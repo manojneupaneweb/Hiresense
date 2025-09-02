@@ -22,6 +22,7 @@ import ViewDetails from "./pages/organization/ViewDetails.jsx";
 
 // User page
 import Profile from "./pages/UserPage.jsx/Profile.jsx";
+import JobApply from "./pages/UserPage.jsx/JobApply.jsx";
 
 axios.defaults.baseURL = "http://localhost:8000";
 axios.defaults.withCredentials = true;
@@ -46,6 +47,11 @@ const router = createBrowserRouter([
           <Profile />
           // </ProtectedRoute>
         ),
+        path:"/jobs/:id/apply",
+        element:(
+          <JobApply />
+
+        )
       },
     ],
   },
@@ -53,8 +59,8 @@ const router = createBrowserRouter([
     path: "/organization",
     element: <Layout />,
     children: [
-      { path: "dashboard", element: <Dashboard /> },
       { path: "jobs", element: <JobManagement /> },
+      { path: "dashboard", element: <Dashboard /> },
       { path: "jobs/:id/applicants", element: <ViewjobApplicants /> },
       { path: "jobs/:id/applicants/:applicantId", element: <ViewDetails /> },
     ],
