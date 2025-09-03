@@ -16,8 +16,6 @@ export const createJobPost = async (req, res) => {
     } = req.body;
 
     const postBy = req.user._id;
-    console.log('------------job create calling-----------');
-    
 
     // Validate required fields
     if (!title || !description || !requirements || !location || !jobType) {

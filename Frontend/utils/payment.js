@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { toast } from "react-toastify";
 
-
-
 export const initiateKhaltiPayment = async (amount, productId, redirectLink) => {
     try {
         const payload = {
@@ -19,7 +17,6 @@ export const initiateKhaltiPayment = async (amount, productId, redirectLink) => 
         });
 
         if (response.data && response.data.payment_url) {
-            // Redirect user to Khalti checkout page
             window.location.href = response.data.payment_url;
         } else {
             console.error("Payment initiation failed", response);

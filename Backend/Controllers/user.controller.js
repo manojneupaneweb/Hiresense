@@ -16,7 +16,6 @@ const generateAccessToken = (user) => {
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
   );
 };
-
 const generateRefreshToken = (user) => {
   return jwt.sign(
     { id: user.id },

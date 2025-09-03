@@ -1,9 +1,9 @@
 import express from "express";
-import verifyJwt from "../middleware/auth.middleware.js";
-import { khaltiInitiate } from "../Controllers/payment.controller.js";
+import { initiateKhaltiPayment, verifyKhaltiPayment } from "../Controllers/payment.controller.js";
 
 const router = express.Router();
 
-router.route('/khalti/initiate').get(verifyJwt, khaltiInitiate);
+router.post("/khalti/initiate", initiateKhaltiPayment);
+router.post("/khalti/verify", verifyKhaltiPayment);
 
 export default router;

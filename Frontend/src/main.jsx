@@ -21,8 +21,10 @@ import ViewjobApplicants from "./pages/organization/ViewjobApplicants.jsx";
 import ViewDetails from "./pages/organization/ViewDetails.jsx";
 
 // User page
-import Profile from "./pages/UserPage.jsx/Profile.jsx";
-import JobApply from "./pages/UserPage.jsx/JobApply.jsx";
+import Profile from "./pages/UserPage/Profile.jsx";
+import JobApply from "./pages/UserPage/JobApply.jsx";
+import JobInterview from "./pages/UserPage/JobInterview.jsx";
+import Paymentsuccess from "./pages/paymentsuccess.jsx";
 
 axios.defaults.baseURL = "http://localhost:8000";
 axios.defaults.withCredentials = true;
@@ -38,21 +40,13 @@ const router = createBrowserRouter([
       { path: "/contact", element: <Contact /> },
       { path: "/work", element: <HowItWorks /> },
       { path: "jobs/:id", element: <JobDetails /> },
+      { path: "paymentsuccess", element: <Paymentsuccess /> },
 
-      // Protected user route
-      {
-        path: "/profile",
-        element: (
-          // <ProtectedRoute allowedRoles={['user']}>
-          <Profile />
-          // </ProtectedRoute>
-        ),
-        path:"/jobs/:id/apply",
-        element:(
-          <JobApply />
 
-        )
-      },
+      // Protected user routes
+      { path: "/profile", element: <Profile /> },
+      { path: "/jobs/:id/apply", element: <JobApply /> },
+      { path: "/jobs/:id/interview", element: <JobInterview /> },
     ],
   },
   {
@@ -66,6 +60,7 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
 
 const root = createRoot(document.getElementById("root"));
 root.render(<RouterProvider router={router} />);

@@ -60,7 +60,7 @@ const Layout = () => {
     // Clear tokens from cookies and localStorage
     document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     localStorage.removeItem('accessToken');
-    navigate('/login');
+    navigate('/');
   };
 
   useEffect(() => {

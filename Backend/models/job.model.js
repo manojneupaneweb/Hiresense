@@ -12,7 +12,7 @@ const jobPostSchema = new mongoose.Schema(
       required: true,
     },
     requirements: {
-      type: String,  
+      type: String,
       required: true,
     },
     responsibilities: [{
@@ -54,7 +54,11 @@ const jobPostSchema = new mongoose.Schema(
     applicants: {
       type: Number,
       default: 0
-    }
+    },
+    interviewScore: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InterviewScore",
+    },
   },
   { timestamps: true }
 );

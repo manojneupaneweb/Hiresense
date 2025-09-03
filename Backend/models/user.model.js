@@ -30,7 +30,11 @@ const userSchema = new Schema(
     paymenttype: {
       type: String,
       default: null
-    }
+    },
+     interviewScore: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InterviewScore",
+    },
 
   },
   { timestamps: true }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     Loader,
@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 
 // Analysis Popup Component
-function AnalysisPopup({ result, onClose }) {
+function AnalysisPopup({ result, onClose, onContinue }) {
     const score = result?.analysis?.score || 0;
     const suggestion = result?.analysis?.suggestion || 'No suggestions available.';
-    
+    const canContinue = score >= 35;
+
     // Determine color based on score
     const getScoreColor = () => {
         if (score >= 80) return 'text-green-600';
@@ -33,11 +34,11 @@ function AnalysisPopup({ result, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Blurred Background */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
                 onClick={onClose}
             ></div>
-            
+
             {/* Popup Content */}
             <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 mx-auto z-10">
                 {/* Close Button */}
@@ -47,13 +48,13 @@ function AnalysisPopup({ result, onClose }) {
                 >
                     <X size={24} />
                 </button>
-                
+
                 {/* Header */}
                 <div className="text-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">CV Analysis Result</h2>
                     <p className="text-gray-600">How your resume matches the job requirements</p>
                 </div>
-                
+
                 {/* Score Circle */}
                 <div className="flex justify-center mb-6">
                     <div className="relative">
@@ -83,19 +84,48 @@ function AnalysisPopup({ result, onClose }) {
                         </div>
                     </div>
                 </div>
-                
+
                 {/* Feedback Section */}
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
                     <h3 className="font-semibold text-gray-900 mb-2">Feedback & Suggestions</h3>
                     <p className="text-gray-700 text-sm">{suggestion}</p>
                 </div>
-                
+
+                {/* Score Warning */}
+                {!canContinue && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center">
+                            <AlertCircle size={20} className='text-red-600 mr-2' />
+                            <p className="text-red-700 text-sm font-medium">
+                                Your resume score is below the required threshold (35/100).
+                                Please improve your resume before applying.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Message */}
+                {canContinue && (
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center">
+                            <CheckCircle size={20} className="text-green-600 mr-2" />
+                            <p className="text-green-700 text-sm font-medium">
+                                Congratulations! Your resume meets our requirements.
+                                You can now proceed to the interview.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Action Button */}
                 <button
-                    onClick={onClose}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors font-medium"
+                    onClick={canContinue ? onContinue : onClose}
+                    className={`w-full py-3 px-4 rounded-xl transition-colors font-medium ${canContinue
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
                 >
-                    Continue Application
+                    {canContinue ? 'Proceed to Interview' : 'Upload Improved Resume'}
                 </button>
             </div>
         </div>
@@ -104,6 +134,7 @@ function AnalysisPopup({ result, onClose }) {
 
 function JobApply() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -111,6 +142,7 @@ function JobApply() {
     const [analysisResult, setAnalysisResult] = useState(null);
     const [showAnalysisPopup, setShowAnalysisPopup] = useState(false);
     const [resumeFile, setResumeFile] = useState(null);
+    const [uploadSuccess, setUploadSuccess] = useState(false);
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -145,6 +177,7 @@ function JobApply() {
         if (!file) return;
 
         setResumeFile(file);
+        setUploadSuccess(false);
 
         if (file.type !== 'application/pdf') {
             setError('Please upload a PDF file');
@@ -171,15 +204,28 @@ function JobApply() {
                 },
                 withCredentials: true,
             });
+            localStorage.setItem("cvAnalysis", JSON.stringify(response.data.analysis));
 
             setAnalysisResult(response.data);
             setShowAnalysisPopup(true);
+            setUploadSuccess(true);
+
+            if (response.data?.analysis?.score >= 35) {
+                setTimeout(() => {
+                    navigate(`/jobs/${id}/interview`);
+                }, 10000); // Redirect after 2 seconds
+            }
         } catch (err) {
             console.error('Error analyzing CV:', err);
             setError(err.response?.data?.message || 'Failed to analyze CV');
         } finally {
             setAnalyzing(false);
         }
+    };
+
+    const handleContinueApplication = () => {
+        // Redirect to interview page
+        navigate(`/jobs/${id}/interview`);
     };
 
     if (loading) {
@@ -359,8 +405,8 @@ function JobApply() {
 
                                 {/* Display selected file */}
                                 {resumeFile && (
-                                    <p className="text-sm text-green-600 mt-4">
-                                        ✓ {resumeFile.name}
+                                    <p className={`text-sm mt-4 ${uploadSuccess ? 'text-green-600' : 'text-gray-600'}`}>
+                                        {uploadSuccess ? '✓ ' : ''}{resumeFile.name}
                                     </p>
                                 )}
                             </div>
@@ -373,21 +419,42 @@ function JobApply() {
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 mt-6">
-                                <button
-                                    onClick={() => {
-                                        setResumeFile(null);
-                                        setAnalysisResult(null);
-                                    }}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
-                                >
-                                    Upload Different CV
-                                </button>
-                                <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium">
-                                    Continue Application
-                                </button>
-                            </div>
+                            {/* Continue Application Button */}
+                            <button
+                                onClick={handleContinueApplication}
+                                disabled={!uploadSuccess || (analysisResult?.analysis?.score || 0) < 35}
+                                className={`w-full px-4 py-3 rounded-xl transition-colors font-medium ${uploadSuccess && (analysisResult?.analysis?.score || 0) >= 35
+                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                {analyzing ? 'Analyzing...' : 'Continue to Interview'}
+                            </button>
+
+                            {/* Score warning */}
+                            {analysisResult && analysisResult.analysis.score < 35 && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div className="flex items-start">
+                                        <AlertCircle size={20} className="text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                                        <p className="text-red-700 text-sm">
+                                            Your resume score is below the required threshold (35/100).
+                                            Please upload an improved resume to continue with your application.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Success message */}
+                            {analysisResult && analysisResult.analysis.score >= 35 && (
+                                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                                    <div className="flex items-start">
+                                        <CheckCircle size={20} className="text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                                        <p className="text-green-700 text-sm">
+                                            Your resume meets our requirements! You can now proceed to the interview.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -395,9 +462,10 @@ function JobApply() {
 
             {/* Analysis Popup */}
             {showAnalysisPopup && analysisResult && (
-                <AnalysisPopup 
-                    result={analysisResult} 
-                    onClose={() => setShowAnalysisPopup(false)} 
+                <AnalysisPopup
+                    result={analysisResult}
+                    onClose={() => setShowAnalysisPopup(false)}
+                    onContinue={handleContinueApplication}
                 />
             )}
         </div>

@@ -258,6 +258,7 @@ const JobManagement = () => {
                   <th className="py-4 px-6 font-medium">Posted Date</th>
                   <th className="py-4 px-6 font-medium">Status</th>
                   <th className="py-4 px-6 font-medium">Applicants</th>
+                  <th className="py-4 px-6 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -310,15 +311,14 @@ const JobManagement = () => {
                         <span className="text-gray-900">{job.applicants || 0}</span>
                       </div>
                     </td>
-                    <a
-                      href={`/organization/jobs/${job._id}/applicants`}
-                      target="_blank"
-                      className="px-4 py-2 bg-blue-600 cursor-pointer text-white rounded-lg shadow hover:bg-blue-700 transition"
-                    >
-                      View Applicant
-                    </a>
-
-
+                    <td className="py-4 px-6">
+                      <Link
+                        to={`/organization/jobs/${job._id || job.id}/applicants`}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition inline-block"
+                      >
+                        View Applicants
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -328,12 +328,8 @@ const JobManagement = () => {
           {/* Mobile Card View */}
           <div className="md:hidden space-y-4">
             {filteredJobs.map((job) => (
-              <Link
-                key={job._id || job.id}
-                to={`/organization/jobs/${job._id || job.id}`}
-                className="block bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div>
+              <div key={job._id || job.id} className="block bg-white rounded-2xl p-5 shadow-sm">
+                <Link to={`/organization/jobs/${job._id || job.id}`}>
                   <h3 className="font-bold text-lg text-gray-900">{job.title || "Untitled Position"}</h3>
                   <div className="flex items-center mt-1 text-sm text-gray-500">
                     <MapPin size={14} className="mr-1" />
@@ -343,7 +339,7 @@ const JobManagement = () => {
                     <Calendar size={14} className="mr-1" />
                     <span>{job.postedDate ? new Date(job.postedDate).toLocaleDateString() : "Unknown date"}</span>
                   </div>
-                </div>
+                </Link>
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <div>
@@ -380,7 +376,16 @@ const JobManagement = () => {
                     </div>
                   </div>
                 </div>
-              </Link>
+                
+                <div className="mt-4">
+                  <Link
+                    to={`/organization/jobs/${job._id || job.id}/applicants`}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition text-center block"
+                  >
+                    View Applicants
+                  </Link>
+                </div>
+              </div>
             ))}
           </div>
         </>
