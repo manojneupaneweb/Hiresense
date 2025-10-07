@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 // Analysis Popup Component
-function AnalysisPopup({ result, onClose, onContinue }) {
+function AnalysisPopup({ result, onClose, onContinue, onRedirectToJobs }) {
     const score = result?.analysis?.score || 0;
     const suggestion = result?.analysis?.suggestion || 'No suggestions available.';
     const canContinue = score >= 35;
@@ -101,6 +101,12 @@ function AnalysisPopup({ result, onClose, onContinue }) {
                                 Please improve your resume before applying.
                             </p>
                         </div>
+                        <button
+                            onClick={onRedirectToJobs}
+                            className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Browse Other Jobs
+                        </button>
                     </div>
                 )}
 
@@ -213,7 +219,7 @@ function JobApply() {
             if (response.data?.analysis?.score >= 35) {
                 setTimeout(() => {
                     navigate(`/jobs/${id}/interview`);
-                }, 10000); // Redirect after 2 seconds
+                }, 10000); // Redirect after 10 seconds
             }
         } catch (err) {
             console.error('Error analyzing CV:', err);
@@ -227,6 +233,12 @@ function JobApply() {
         // Redirect to interview page
         navigate(`/jobs/${id}/interview`);
     };
+
+    const handleRedirectToJobs = () => {
+        // Redirect to jobs page
+        navigate('/jobs');
+    };
+   
 
     if (loading) {
         return (
@@ -466,6 +478,7 @@ function JobApply() {
                     result={analysisResult}
                     onClose={() => setShowAnalysisPopup(false)}
                     onContinue={handleContinueApplication}
+                    onRedirectToJobs={handleRedirectToJobs}
                 />
             )}
         </div>
