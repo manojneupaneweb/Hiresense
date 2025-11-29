@@ -5,35 +5,29 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
   const [isListening, setIsListening] = useState(false);
   const [isAISpeaking, setIsAISpeaking] = useState(false);
   const [userSpeaking, setUserSpeaking] = useState(false);
-  
+
   const recognitionRef = useRef(null);
   const speechTimerRef = useRef(null);
 
-  // Safe setMessages function
   const safeSetMessages = useCallback((message) => {
     if (setMessages && typeof setMessages === 'function') {
       setMessages(prev => [...prev, message]);
-    } else {
-      console.error('setMessages is not a function:', setMessages);
     }
   }, [setMessages]);
 
-  // Initialize Speech Recognition
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      console.log('Speech Recognition not supported');
       return;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     recognition.onstart = () => {
-      console.log('🎤 Speech recognition started');
       setIsListening(true);
     };
 
@@ -52,43 +46,31 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
         }
       }
 
-      // Show real-time typing
       if (interim) {
         setTranscript(interim);
         setUserSpeaking(true);
         clearTimeout(speechTimerRef.current);
       }
 
-      // Handle final result
       if (final) {
-        console.log('✅ Final transcript:', final);
-        
-        // Add to chat immediately using safe function
         const userMessage = {
           id: Date.now(),
           type: 'user',
           text: final,
           timestamp: new Date().toLocaleTimeString()
         };
-        
+
         safeSetMessages(userMessage);
         setTranscript('');
         setUserSpeaking(true);
 
-        // Wait 2 seconds then send to AI via Socket.IO
         clearTimeout(speechTimerRef.current);
         speechTimerRef.current = setTimeout(() => {
           const isInterviewActive = typeof interviewStarted === 'boolean' ? interviewStarted : interviewStarted?.current;
           const isSocketConnected = socket?.connected;
-          
-          console.log('🔴 DEBUG: Interview active?', isInterviewActive);
-          console.log('🔴 DEBUG: Socket connected?', isSocketConnected);
-          
+
           if (socket && isSocketConnected && isInterviewActive) {
-            console.log('✅ Sending user_message to backend:', final);
             socket.emit('user_message', final);
-          } else {
-            console.log('❌ Cannot send - conditions not met');
           }
           setUserSpeaking(false);
         }, 2000);
@@ -96,28 +78,22 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
     };
 
     recognition.onerror = (event) => {
-      console.log('❌ Speech recognition error:', event.error);
       setIsListening(false);
     };
 
     recognition.onend = () => {
-      console.log('🔴 Speech recognition ended');
       setIsListening(false);
-      
-      // Auto-restart if should be listening
+
       const isInterviewActive = typeof interviewStarted === 'boolean' ? interviewStarted : interviewStarted?.current;
       if (isInterviewActive && micEnabled && !isAISpeaking) {
         setTimeout(() => {
           try {
-            // Check if already started before restarting
             if (recognitionRef.current) {
               recognitionRef.current.start();
             }
           } catch (error) {
             if (error.name !== 'InvalidStateError') {
-              console.log('Failed to restart:', error);
             }
-            // Ignore InvalidStateError (already started)
           }
         }, 1000);
       }
@@ -130,14 +106,12 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
         try {
           recognitionRef.current.stop();
         } catch (error) {
-          // Ignore errors during cleanup
         }
       }
       clearTimeout(speechTimerRef.current);
     };
   }, [isAISpeaking, interviewStarted, micEnabled, socket, safeSetMessages]);
 
-  // Control speech recognition based on states
   useEffect(() => {
     const recognition = recognitionRef.current;
     if (!recognition) return;
@@ -145,20 +119,16 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
     const isInterviewActive = typeof interviewStarted === 'boolean' ? interviewStarted : interviewStarted?.current;
 
     if (isInterviewActive && micEnabled && !isAISpeaking) {
-      console.log('🚀 Starting recognition - Interview started');
       try {
         recognition.start();
       } catch (error) {
         if (error.name !== 'InvalidStateError') {
-          console.log('Start error:', error);
         }
       }
     } else {
-      console.log('🛑 Stopping recognition');
       try {
         recognition.stop();
       } catch (error) {
-        // Ignore stop errors
       }
       setTranscript('');
       setUserSpeaking(false);
@@ -166,66 +136,68 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
     }
   }, [interviewStarted, micEnabled, isAISpeaking]);
 
-  // AI Speech Function
   const speakMessage = useCallback((text) => {
     if (!('speechSynthesis' in window)) return Promise.resolve();
 
     return new Promise((resolve) => {
       window.speechSynthesis.cancel();
-      
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.9;
       utterance.pitch = 1.1;
       utterance.volume = 1;
 
-      // Get female voice
       const voices = window.speechSynthesis.getVoices();
-      const femaleVoice = voices.find(voice => 
-        voice.name.includes('Female') || 
-        voice.name.includes('Samantha') ||
-        voice.name.includes('Karen') ||
-        voice.name.includes('Tessa') ||
-        voice.name.includes('Zira') ||
-        voice.name.includes('Hazel')
-      );
-      
+      const priority = ["Samantha", "Hazel", "Zira", "Karen", "Tessa"];
+
+      let femaleVoice = null;
+      for (const name of priority) {
+        const v = voices.find(voice => voice.name.includes(name));
+        if (v) {
+          femaleVoice = v;
+          break;
+        }
+      }
+
+      if (!femaleVoice) {
+        femaleVoice = voices.find(voice =>
+          voice.name.toLowerCase().includes("female")
+        );
+      }
+
       if (femaleVoice) utterance.voice = femaleVoice;
 
       utterance.onstart = () => {
-        console.log('🗣️ AI started speaking');
         setIsAISpeaking(true);
         if (recognitionRef.current) {
           try {
             recognitionRef.current.stop();
-          } catch (error) {
-            // Ignore stop errors
-          }
+          } catch (error) { }
         }
       };
 
       utterance.onend = () => {
-        console.log('✅ AI finished speaking');
         setIsAISpeaking(false);
-        
-        // Restart listening after AI speaks
+
         setTimeout(() => {
-          const isInterviewActive = typeof interviewStarted === 'boolean' ? interviewStarted : interviewStarted?.current;
+          const isInterviewActive = typeof interviewStarted === 'boolean'
+            ? interviewStarted
+            : interviewStarted?.current;
+
           if (isInterviewActive && micEnabled && recognitionRef.current) {
             try {
               recognitionRef.current.start();
             } catch (error) {
               if (error.name !== 'InvalidStateError') {
-                console.log('Restart error:', error);
               }
             }
           }
         }, 1000);
-        
+
         resolve();
       };
 
       utterance.onerror = () => {
-        console.log('❌ AI speech error');
         setIsAISpeaking(false);
         resolve();
       };
@@ -234,22 +206,19 @@ const useSpeechRecognition = (socket, interviewStarted, micEnabled, setMessages)
     });
   }, [interviewStarted, micEnabled]);
 
-  // Listen for AI messages from socket
   useEffect(() => {
     if (!socket) return;
 
     const handleAIMessage = (data) => {
-      if (data.text && data.type === 'ai') {
+      if (data.text) {
         speakMessage(data.text);
       }
     };
 
     socket.on('interview_message', handleAIMessage);
-    socket.on('ai_message', handleAIMessage);
 
     return () => {
       socket.off('interview_message', handleAIMessage);
-      socket.off('ai_message', handleAIMessage);
     };
   }, [socket, speakMessage]);
 

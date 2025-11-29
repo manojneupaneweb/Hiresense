@@ -1,17 +1,14 @@
 import express from "express";
-import { CVAnalysis } from "../Controllers/ai.controller.js";
-import  verifyJwt  from "../middleware/auth.middleware.js";
+import { CVAnalysis, saveInterviewScorecard } from "../Controllers/ai.controller.js";
+import verifyJwt from "../middleware/auth.middleware.js";
 
-import {upload} from '../middleware/multer.js'
+import { upload } from '../middleware/multer.js'
 
 const router = express.Router();
 
-router.post(
-  "/cvanalysis",
-  verifyJwt,
-  upload.single("resume"),
-  CVAnalysis
-);
+router.post("/cvanalysis", verifyJwt, upload.single("resume"), CVAnalysis );
 
+
+router.post("/interview/score", verifyJwt, saveInterviewScorecard);
 
 export default router;

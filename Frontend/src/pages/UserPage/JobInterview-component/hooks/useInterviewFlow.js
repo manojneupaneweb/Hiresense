@@ -9,11 +9,9 @@ const useInterviewFlow = (jobDetails, socket) => {
   const [showReport, setShowReport] = useState(false);
   const [interviewReport, setInterviewReport] = useState(null);
   const [inactivityWarning, setInactivityWarning] = useState(false);
-  
-  // Create ref for interview started state
+
   const interviewStartedRef = useRef(false);
 
-  // Keep ref in sync with state
   useEffect(() => {
     interviewStartedRef.current = interview.started;
   }, [interview.started]);
@@ -37,7 +35,7 @@ const useInterviewFlow = (jobDetails, socket) => {
     setShowReport(false);
     setInterviewReport(null);
     setInactivityWarning(false);
-    
+
     interviewStartedRef.current = true;
 
     if (socket && jobDetails) {
@@ -79,7 +77,7 @@ const useInterviewFlow = (jobDetails, socket) => {
     startInterview,
     stopInterview,
     generateInterviewReport,
-    interviewStartedRef // Export the ref
+    interviewStartedRef
   };
 };
 

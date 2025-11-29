@@ -8,7 +8,6 @@ const PORT = process.env.PORT || 8000;
 
 connectDB()
   .then(() => {
-    console.log("✅ Database connected successfully");
 
     const server = http.createServer(app);
 

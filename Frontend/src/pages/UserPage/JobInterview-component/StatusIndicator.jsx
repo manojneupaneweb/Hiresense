@@ -1,12 +1,12 @@
 import React from 'react';
 
-const StatusIndicator = ({ 
-  cameraEnabled, 
-  micEnabled, 
-  connectionStatus, 
-  isSpeaking, 
-  isListening, 
-  userSpeaking 
+const StatusIndicator = ({
+  cameraEnabled,
+  micEnabled,
+  connectionStatus,
+  isSpeaking,
+  isListening,
+  userSpeaking
 }) => {
   return (
     <div className="flex items-center space-x-4 text-sm">
@@ -38,9 +38,8 @@ const StatusIndicator = ({
       </div>
 
       <div className="flex items-center space-x-1">
-        <div className={`w-2 h-2 rounded-full ${
-          connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
-        }`}></div>
+        <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+          }`}></div>
         <span className="text-gray-400">Call</span>
       </div>
 
