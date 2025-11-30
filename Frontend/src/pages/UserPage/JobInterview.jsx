@@ -11,9 +11,35 @@ import InterviewControls from './JobInterview-component/InterviewControls';
 import ErrorModal from './JobInterview-component/ErrorModal';
 import { VideoDisplay } from './JobInterview-component/VideoDisplay';
 import ScoreCard from './JobInterview-component/ScoreCard.jsx';
+import axios from 'axios';
+import { useEffect } from 'react';
 
 const JobInterview = () => {
   const { id } = useParams();
+
+  // const checkUserValidation = async () => {
+  //   const token = localStorage.getItem('accessToken');
+  //   // if (!token) {
+  //   //   window.location.href = '/login';
+  //   // }
+  //   try {
+  //     const response = await axios.get(`/api/interviewScore/interviewer-validation/${id}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`
+  //         }
+  //       }
+  //     )
+  //     console.log('response', response);
+
+  //   } catch (error) {
+
+  //   }
+
+  // }
+  // useEffect(() => {
+  //   checkUserValidation();
+  // }, []);
 
   const {
     devices,

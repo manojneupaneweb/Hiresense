@@ -136,6 +136,7 @@ const useSocketConnection = (id) => {
     const randomFeedback = feedbacks[Math.floor(Math.random() * feedbacks.length)];
 
     const finalData = {
+      id,
       score: adjustedScore,
       totalQuestions,
       totalAnswers,
@@ -157,10 +158,11 @@ const useSocketConnection = (id) => {
 
 
     try {
-      await axios.post('/api/ai/interview/score', finalData, {
+      const response = await axios.post('/api/interviewScore/store-score', finalData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
         withCredentials: true
       });
+      console.log(response, 'response');
 
     } catch (error) {
       console.error('Error sending score data:', error);

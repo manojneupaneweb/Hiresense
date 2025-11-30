@@ -19,11 +19,10 @@ import {
 
 // Analysis Popup Component
 function AnalysisPopup({ result, onClose, onContinue, onRedirectToJobs }) {
-    const score = result?.analysis?.score || 0;
-    const suggestion = result?.analysis?.suggestion || 'No suggestions available.';
+    const score = result?.analysis?.cvScore || result?.analysis?.score || 0;
+    const suggestion = result?.analysis?.cvSuggestion || result?.analysis?.suggestion || 'No suggestions available.';
     const canContinue = score >= 35;
 
-    // Determine color based on score
     const getScoreColor = () => {
         if (score >= 80) return 'text-green-600';
         if (score >= 60) return 'text-yellow-600';
@@ -51,7 +50,9 @@ function AnalysisPopup({ result, onClose, onContinue, onRedirectToJobs }) {
 
                 {/* Header */}
                 <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">CV Analysis Result</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        {result?.message === "CV already analyzed" ? "CV Analysis Complete" : "CV Analysis Result"}
+                    </h2>
                     <p className="text-gray-600">How your resume matches the job requirements</p>
                 </div>
 
@@ -91,6 +92,18 @@ function AnalysisPopup({ result, onClose, onContinue, onRedirectToJobs }) {
                     <p className="text-gray-700 text-sm">{suggestion}</p>
                 </div>
 
+                {/* Already Analyzed Message */}
+                {result?.message === "CV already analyzed" && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                        <div className="flex items-center">
+                            <CheckCircle size={20} className='text-blue-600 mr-2' />
+                            <p className="text-blue-700 text-sm font-medium">
+                                Your CV has already been analyzed previously. You can proceed with the application.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Score Warning */}
                 {!canContinue && (
                     <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
@@ -111,7 +124,7 @@ function AnalysisPopup({ result, onClose, onContinue, onRedirectToJobs }) {
                 )}
 
                 {/* Success Message */}
-                {canContinue && (
+                {canContinue && result?.message !== "CV already analyzed" && (
                     <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
                         <div className="flex items-center">
                             <CheckCircle size={20} className="text-green-600 mr-2" />
@@ -196,11 +209,7 @@ function JobApply() {
 
             const formData = new FormData();
             formData.append("resume", file);
-            formData.append("jobDescription", job?.description || "");
-            formData.append("requirements", job?.requirements || "");
-            formData.append("responsibilities", JSON.stringify(job?.responsibilities || []));
-            formData.append("skills", JSON.stringify(job?.skills || []));
-
+            formData.append("jobId", id || "");
             const token = localStorage.getItem("accessToken");
 
             const response = await axios.post("/api/ai/cvanalysis", formData, {
@@ -210,16 +219,26 @@ function JobApply() {
                 },
                 withCredentials: true,
             });
-            localStorage.setItem("cvAnalysis", JSON.stringify(response.data.analysis));
 
-            setAnalysisResult(response.data);
-            setShowAnalysisPopup(true);
-            setUploadSuccess(true);
+            // Handle both response formats
+            if (response.data.success) {
+                // Store analysis data in localStorage for later use
+                if (response.data.analysis) {
+                    localStorage.setItem("cvAnalysis", JSON.stringify(response.data.analysis));
+                }
+                
+                setAnalysisResult(response.data);
+                setShowAnalysisPopup(true);
+                setUploadSuccess(true);
 
-            if (response.data?.analysis?.score >= 35) {
-                setTimeout(() => {
-                    navigate(`/jobs/${id}/interview`);
-                }, 10000); // Redirect after 10 seconds
+                // Auto-redirect only for successful new analyses with sufficient score
+                if (response.data.analysis?.cvScore >= 35 && response.data.message !== "CV already analyzed") {
+                    setTimeout(() => {
+                        navigate(`/jobs/${id}/interview`);
+                    }, 10000);
+                }
+            } else {
+                setError(response.data.message || 'Failed to analyze CV');
             }
         } catch (err) {
             console.error('Error analyzing CV:', err);
@@ -238,7 +257,15 @@ function JobApply() {
         // Redirect to jobs page
         navigate('/jobs');
     };
-   
+
+    // Get score from analysis result (handling both formats)
+    const getScore = () => {
+        if (!analysisResult) return 0;
+        return analysisResult.analysis?.cvScore || analysisResult.analysis?.score || 0;
+    };
+
+    // Check if user can continue (score >= 35)
+    const canContinue = getScore() >= 35;
 
     if (loading) {
         return (
@@ -404,15 +431,19 @@ function JobApply() {
                                     onChange={handleFileUpload}
                                     className="hidden"
                                     id="resume-upload"
+                                    disabled={analyzing}
                                 />
 
                                 {/* Label acts as the button */}
                                 <label
                                     htmlFor="resume-upload"
-                                    className="inline-flex items-center px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer font-medium shadow-md hover:shadow-lg"
+                                    className={`inline-flex items-center px-8 py-3 rounded-xl transition-colors cursor-pointer font-medium shadow-md hover:shadow-lg ${analyzing
+                                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
                                 >
                                     <FileText size={20} className="mr-2" />
-                                    {resumeFile ? 'Change File' : 'Choose File'}
+                                    {analyzing ? 'Analyzing...' : resumeFile ? 'Change File' : 'Choose File'}
                                 </label>
 
                                 {/* Display selected file */}
@@ -434,17 +465,17 @@ function JobApply() {
                             {/* Continue Application Button */}
                             <button
                                 onClick={handleContinueApplication}
-                                disabled={!uploadSuccess || (analysisResult?.analysis?.score || 0) < 35}
-                                className={`w-full px-4 py-3 rounded-xl transition-colors font-medium ${uploadSuccess && (analysisResult?.analysis?.score || 0) >= 35
+                                disabled={!canContinue}
+                                className={`w-full px-4 py-3 rounded-xl transition-colors font-medium ${canContinue
                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
-                                {analyzing ? 'Analyzing...' : 'Continue to Interview'}
+                                Continue to Interview
                             </button>
 
                             {/* Score warning */}
-                            {analysisResult && analysisResult.analysis.score < 35 && (
+                            {analysisResult && !canContinue && (
                                 <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                                     <div className="flex items-start">
                                         <AlertCircle size={20} className="text-red-600 mr-2 mt-0.5 flex-shrink-0" />
@@ -457,12 +488,14 @@ function JobApply() {
                             )}
 
                             {/* Success message */}
-                            {analysisResult && analysisResult.analysis.score >= 35 && (
+                            {analysisResult && canContinue && (
                                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                                     <div className="flex items-start">
                                         <CheckCircle size={20} className="text-green-600 mr-2 mt-0.5 flex-shrink-0" />
                                         <p className="text-green-700 text-sm">
-                                            Your resume meets our requirements! You can now proceed to the interview.
+                                            {analysisResult.message === "CV already analyzed" 
+                                                ? "Your CV has been analyzed previously and meets the requirements!"
+                                                : "Your resume meets our requirements! You can now proceed to the interview."}
                                         </p>
                                     </div>
                                 </div>
