@@ -2,7 +2,9 @@ import http from "http";
 import { Server } from "socket.io";
 import connectDB from "./config/DBconnect.js";
 import app from "./app.js";
-import { setupChatSocket } from "./chatSocket.js"; // must match the export
+import { setupChatSocket } from "./chatSocket.js";
+import logger from "./config/logger.js";
+import { startEvaluationWorker } from "./services/evaluationQueue.js";
 
 const PORT = process.env.PORT || 8000;
 
@@ -20,11 +22,12 @@ connectDB()
 
     // Initialize Socket.io events
     setupChatSocket(io);
+    startEvaluationWorker();
 
     server.listen(PORT, () => {
-      console.log(`✅ Server running on port ${PORT} with Socket.io`);
+      logger.info({ port: PORT }, "server listening");
     });
   })
   .catch((err) => {
-    console.error("❌ DB connection failed:", err);
+    logger.error({ err: err.message }, "DB connection failed");
   });

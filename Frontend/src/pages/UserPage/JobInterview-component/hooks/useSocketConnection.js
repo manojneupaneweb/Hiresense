@@ -158,14 +158,26 @@ const useSocketConnection = (id) => {
 
 
     try {
-      const response = await axios.post('/api/interviewScore/store-score', finalData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
-        withCredentials: true
+      const queued = await axios.post("/api/evaluations", {
+        jobId: String(id),
+        candidateId: "self",
+        transcript: finalData.answers.map((row) => ({
+          question: row.question,
+          answer: row.userAnswer,
+        })),
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        withCredentials: true,
       });
-      console.log(response, 'response');
-
+      finalData.evaluationJobId = queued.data.id;
+      finalData.evaluationStatus = queued.data.status;
+      const status = await axios.get(`/api/evaluations/${queued.data.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        withCredentials: true,
+      });
+      finalData.evaluationStatus = status.data.status;
     } catch (error) {
-      console.error('Error sending score data:', error);
+      finalData.evaluationStatus = "unavailable";
     }
 
     setScoreData(finalData);

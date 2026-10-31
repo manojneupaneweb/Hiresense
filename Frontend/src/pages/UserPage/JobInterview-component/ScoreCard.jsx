@@ -50,7 +50,8 @@ const ScoreCard = ({ scoreData, onClose }) => {
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-xl text-white">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-2xl font-bold">Interview Results</h2>
+              <h2 className="text-2xl font-bold">Interview recommendation</h2>
+              <p className="text-blue-100 text-sm">A reviewer makes the final decision. This score is explainable, not a hiring decision.</p>
               <p className="text-blue-100 mt-1">
                 {totalMessages > 0 
                   ? `Analyzed ${totalMessages} messages across ${formatTime(scoreData.duration)}` 
@@ -66,6 +67,9 @@ const ScoreCard = ({ scoreData, onClose }) => {
             </button>
           </div>
           
+          {scoreData.evaluationStatus && (
+            <p className="text-sm text-blue-50">Scoring job {scoreData.evaluationJobId}: {scoreData.evaluationStatus}</p>
+          )}
           <div className="grid grid-cols-4 gap-6 mt-6">
             <div className="text-center">
               <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-white border-opacity-30">
