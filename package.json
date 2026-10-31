@@ -1,6 +1,7 @@
 {
   "name": "hiresense",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "npm test --prefix Backend && npm test --prefix Frontend",
     "eval": "npm run eval --prefix Backend",

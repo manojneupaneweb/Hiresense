@@ -24,6 +24,6 @@ test("setup files the README points at exist", () => {
   }
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
   assert.match(readme, /cd Backend/);
-  assert.match(readme, /cd \.\.\/Frontend/);
+  assert.match(readme, /cd Frontend/);
   assert.doesNotMatch(readme, /Hugging Face/);
 });
