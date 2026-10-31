@@ -1,0 +1,9 @@
+{
+  "name": "hiresense",
+  "private": true,
+  "scripts": {
+    "test": "npm test --prefix Backend && npm test --prefix Frontend",
+    "eval": "npm run eval --prefix Backend",
+    "lint": "npm run lint --prefix Backend && npm run lint --prefix Frontend"
+  }
+}

@@ -30,7 +30,7 @@ const ScoreCard = ({ scoreData, onClose }) => {
         minute: '2-digit',
         second: '2-digit'
       });
-    } catch (error) {
+    } catch {
       return '--:--:--';
     }
   };
