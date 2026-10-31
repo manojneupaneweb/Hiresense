@@ -1,0 +1,62 @@
+[
+  {
+    "id": "strong-index",
+    "level": "strong",
+    "expected": { "communication": [8, 10], "confidence": [8, 10], "technical_knowledge": [8, 10] },
+    "transcript": [{ "question": "How did you speed up a slow query?", "answer": "I built a Node API and added a MongoDB index because the query scanned every document. For example, a compound index on userId and createdAt reduced latency from 800ms to 40ms. I measured it in staging with logs and a Redis cache in front of the read path. I also added an integration test for the transaction that writes the order and the payment together. We deploy with Docker and monitor error rates after each release so we can roll back." }]
+  },
+  {
+    "id": "strong-react",
+    "level": "strong",
+    "expected": { "communication": [8, 10], "confidence": [8, 10], "technical_knowledge": [8, 10] },
+    "transcript": [{ "question": "Describe a frontend change you shipped.", "answer": "I rebuilt a React page because the old one fetched the same API on every click. For example, I cached the job list and measured a drop in requests. I added a test around the empty state, kept the schema of the response stable, and watched latency in the browser. We deploy that bundle with Docker and monitor the error rate. The queue of background saves no longer blocks the form." }]
+  },
+  {
+    "id": "strong-queue",
+    "level": "strong",
+    "expected": { "communication": [8, 10], "confidence": [8, 10], "technical_knowledge": [8, 10] },
+    "transcript": [{ "question": "When would you use a queue?", "answer": "I moved email sending onto a Redis queue because the HTTP request was waiting on a slow provider. For example, checkout latency fell once the worker handled the send. I added a test that a failed job retries, and I monitor the queue depth. The Node service stays small and we deploy the worker in Docker next to the API." }]
+  },
+  {
+    "id": "medium-class",
+    "level": "medium",
+    "expected": { "communication": [4, 7], "confidence": [2, 7], "technical_knowledge": [3, 7] },
+    "transcript": [{ "question": "Tell me about a project.", "answer": "I used Node on a class project and wrote a small API with one test. I am not sure about production caching, but the schema stored users and orders and the query returned JSON to a simple page." }]
+  },
+  {
+    "id": "medium-sql",
+    "level": "medium",
+    "expected": { "communication": [4, 7], "confidence": [2, 7], "technical_knowledge": [3, 7] },
+    "transcript": [{ "question": "How do you check a query?", "answer": "I look at the SQL query plan when a page feels slow. I think an index helps, but I am not sure which column to pick. I have written a test for the happy path in a course assignment." }]
+  },
+  {
+    "id": "medium-react",
+    "level": "medium",
+    "expected": { "communication": [4, 7], "confidence": [2, 7], "technical_knowledge": [3, 7] },
+    "transcript": [{ "question": "What is a component?", "answer": "A React component is a function that returns markup. I would fetch data in it from an API. I am not sure about caching. I used one on a class site that listed jobs." }]
+  },
+  {
+    "id": "medium-deploy",
+    "level": "medium",
+    "expected": { "communication": [4, 7], "confidence": [2, 7], "technical_knowledge": [3, 7] },
+    "transcript": [{ "question": "How do you release code?", "answer": "I deploy a Node app with Docker for a school demo. I think we should monitor logs. I am not sure how a queue would fit. The API had a basic test and a users schema." }]
+  },
+  {
+    "id": "weak-idk",
+    "level": "weak",
+    "expected": { "communication": [0, 3], "confidence": [0, 3], "technical_knowledge": [0, 3] },
+    "transcript": [{ "question": "How would you debug latency?", "answer": "I do not know. Maybe later." }]
+  },
+  {
+    "id": "weak-short",
+    "level": "weak",
+    "expected": { "communication": [0, 3], "confidence": [0, 3], "technical_knowledge": [0, 3] },
+    "transcript": [{ "question": "Describe a system you designed.", "answer": "Nothing yet." }]
+  },
+  {
+    "id": "weak-hedge",
+    "level": "weak",
+    "expected": { "communication": [0, 3], "confidence": [0, 3], "technical_knowledge": [0, 3] },
+    "transcript": [{ "question": "Explain a transaction.", "answer": "I guess maybe." }]
+  }
+]

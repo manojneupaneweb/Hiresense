@@ -44,9 +44,13 @@ export function scoreAnswers(answers) {
   const hedges = (blob.match(/\b(maybe|perhaps|not sure|i guess|kinda|sort of)\b/gi) || []).length;
   const examples = (blob.match(/\b(for example|for instance|because|measured|reduced|increased)\b/gi) || []).length;
 
-  const communication = clamp(Math.round(Math.min(n, 140) / 12));
+  const communication = clamp(Math.round(Math.min(n, 100) / 8));
   const confidence = clamp(communication + Math.min(examples, 2) - hedges * 2);
-  const technical = clamp(hits * 2 + Math.min(examples, 2));
+  let technical = hits * 2 + Math.min(examples, 2);
+  // Short answers cannot reach a high technical score by listing keywords.
+  if (n < 25) technical = Math.min(technical, 3);
+  else if (n < 55) technical = Math.min(technical, 6);
+  technical = clamp(technical);
 
   const evidence = [quoteEvidence(blob)];
   const byCategory = {
