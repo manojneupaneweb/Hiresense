@@ -26,7 +26,7 @@ import JobApply from "./pages/UserPage/JobApply.jsx";
 import JobInterview from "./pages/UserPage/JobInterview.jsx";
 import Paymentsuccess from "./pages/paymentsuccess.jsx";
 
-axios.defaults.baseURL = "http://localhost:8000";
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 axios.defaults.withCredentials = true;
 
 const router = createBrowserRouter([

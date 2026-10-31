@@ -27,7 +27,7 @@ export const initiateKhaltiPayment = async (req, res) => {
             payload,
             {
                 headers: {
-                    "Authorization": "key live_secret_key_68791341fdd94846a146f0457ff7b455", // Replace with your test key
+                    "Authorization": `key ${process.env.KHALTI_SECRET_KEY || ""}`,
                     "Content-Type": "application/json"
                 }
             }
@@ -58,7 +58,7 @@ export const verifyKhaltiPayment = async (req, res) => {
             { pidx },
             {
                 headers: {
-                    Authorization: "Key <live_secret_key>", // exactly as in Khalti dashboard
+                    Authorization: `Key ${process.env.KHALTI_SECRET_KEY || ""}`,
                     "Content-Type": "application/json"
                 }
             }

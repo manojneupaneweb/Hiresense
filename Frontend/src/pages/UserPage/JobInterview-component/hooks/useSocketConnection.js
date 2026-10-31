@@ -50,7 +50,7 @@ const useSocketConnection = (id) => {
   }, [id]);
 
   useEffect(() => {
-    const newSocket = io('http://localhost:8000', {
+    const newSocket = io(import.meta.env.VITE_API_URL || "http://localhost:8000", {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

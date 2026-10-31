@@ -32,13 +32,13 @@ This system automates the **first-round interview process** while keeping transp
 
 | Layer | Technology |
 |-------|-------------|
-| **Frontend** | React + Tailwind CSS |
-| **Backend** | Node.js + Express.js |
-| **Database** | MongoDB |
-| **Auth** | JWT + Refresh Tokens |
-| **AI / NLP** | OpenAI / Hugging Face Transformers |
-| **Speech-to-Text** | Whisper API or other STT providers |
-| **Storage** | Cloudinary / github |
+| **Frontend** | React 19 + Vite. Tailwind is loaded from the CDN in `Frontend/index.html` |
+| **Backend** | Node.js + Express 5 |
+| **Database** | MongoDB (Mongoose) |
+| **Auth** | JWT access tokens (`ACCESS_TOKEN_SECRET`). A refresh-token method exists on the user model; there is no refresh route |
+| **AI** | Google Gemini (`gemini-2.5-flash`) through `@inngest/agent-kit` |
+| **Speech** | Browser speech recognition in the interview UI. The server does not call a transcription API |
+| **Storage** | Local disk via Multer (`Backend/public/temp`). Cloudinary is optional and only used if those env vars are set |
 
 ---
 
@@ -64,36 +64,37 @@ cd Hiresense
 For backend:
 
 ```bash
-cd backend
+cd Backend
 npm install
 ```
 
 For frontend:
 
 ```bash
-cd ../frontend
+cd ../Frontend
 npm install
 ```
 
 ### 3️⃣ Setup environment variables
 
-Copy `.env.example` to `.env` and add your credentials:
+Copy the example env file in each app. MongoDB must already be running at `MONGO_URI`.
 
+```bash
+cp Backend/.env.example Backend/.env
+cp Frontend/.env.example Frontend/.env
 ```
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_secret
-OPENAI_API_KEY=your_api_key
-```
+
+Fill `MONGO_URI`, `ACCESS_TOKEN_SECRET`, `REFRESH_TOKEN_SECRET`, and `GEMINI_API_KEY`. Leave secrets out of git. `JWT_SECRET` is listed for compatibility; the running auth code reads `ACCESS_TOKEN_SECRET`.
 
 ### 4️⃣ Run locally
 
-Start backend:
+Start the API from `Backend` (port 8000):
 
 ```bash
 npm run dev
 ```
 
-Start frontend:
+Start the web app from `Frontend` (port 5173):
 
 ```bash
 npm run dev
